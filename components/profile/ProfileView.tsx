@@ -6,6 +6,7 @@ import { Container, EmptyState, SectionHeading } from "@/components/ui/Section";
 import { buttonClass } from "@/components/ui/styles";
 import { Avatar } from "./Avatar";
 import { FollowButton } from "./FollowButton";
+import { ShareProfileButton } from "./ShareProfileButton";
 import { AchievementBadge } from "@/components/achievements/AchievementBadge";
 
 type View = NonNullable<Awaited<ReturnType<typeof getProfileView>>>;
@@ -31,17 +32,25 @@ export function ProfileView({ view, signedIn }: { view: View; signedIn: boolean 
             </span>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {view.isSelf ? (
-            <Link href="/profile/edit" className={buttonClass.secondary}>
-              <Settings className="size-4" aria-hidden /> Edit profile
-            </Link>
-          ) : signedIn ? (
-            <FollowButton targetId={card.id} initialFollowing={view.following} />
+            <>
+              <ShareProfileButton username={card.username} name={name} isSelf variant="primary" />
+              <Link href="/profile/edit" className={buttonClass.secondary}>
+                <Settings className="size-4" aria-hidden /> Edit profile
+              </Link>
+            </>
           ) : (
-            <Link href="/login" className={buttonClass.primary}>
-              Log in to follow
-            </Link>
+            <>
+              {signedIn ? (
+                <FollowButton targetId={card.id} initialFollowing={view.following} />
+              ) : (
+                <Link href={`/login?next=${encodeURIComponent(`/profile/${card.username}`)}`} className={buttonClass.primary}>
+                  Log in to follow
+                </Link>
+              )}
+              <ShareProfileButton username={card.username} name={name} isSelf={false} />
+            </>
           )}
         </div>
       </header>

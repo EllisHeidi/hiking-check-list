@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { mountainSchema, slugify, mapsUrl, type MountainInput } from "@/lib/validation/mountain";
+import { isStage, stageForElevation, type StageKey } from "@/lib/stages";
 
 type Result = { ok: true; slug?: string } | { ok: false; error: string };
 
@@ -30,6 +31,11 @@ async function nextSortOrder(supabase: Awaited<ReturnType<typeof createClient>>,
   return ((data?.sort_order as number | undefined) ?? 0) + 1;
 }
 
+async function defaultStage(supabase: Awaited<ReturnType<typeof createClient>>, mountainId: string) {
+  const { data } = await supabase.from("mountains").select("elevation").eq("id", mountainId).maybeSingle();
+  return stageForElevation((data?.elevation as number | null | undefined) ?? null);
+}
+
 // --- Your list -------------------------------------------------------------
 
 export async function addToList(mountainId: string): Promise<Result> {
@@ -41,7 +47,12 @@ export async function addToList(mountainId: string): Promise<Result> {
   const { error } = await supabase
     .from("user_mountains")
     .upsert(
-      { user_id: user.id, mountain_id: mountainId, sort_order: await nextSortOrder(supabase, user.id) },
+      {
+        user_id: user.id,
+        mountain_id: mountainId,
+        sort_order: await nextSortOrder(supabase, user.id),
+        stage: await defaultStage(supabase, mountainId),
+      },
       { onConflict: "user_id,mountain_id", ignoreDuplicates: true },
     );
   if (error) return { ok: false, error: "Couldn't add it to your list." };
@@ -65,32 +76,45 @@ export async function removeFromList(mountainId: string): Promise<Result> {
   return { ok: true };
 }
 
-/** Swap a mountain with its neighbour in your list. */
-export async function moveInList(mountainId: string, direction: "up" | "down"): Promise<Result> {
+/**
+ * Save a new order (and stage) for your list, from drag and drop. `entries`
+ * must be exactly the mountains currently on your list, excluding the final
+ * objective, in their new order.
+ */
+export async function reorderList(entries: { mountainId: string; stage: StageKey }[]): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Log in first." };
-  if (!uuid.safeParse(mountainId).success) return { ok: false, error: "Unknown mountain." };
+  if (
+    !Array.isArray(entries) ||
+    entries.length > 500 ||
+    !entries.every((e) => e && uuid.safeParse(e.mountainId).success && isStage(e.stage))
+  ) {
+    return { ok: false, error: "Invalid order." };
+  }
 
   const supabase = await createClient();
   const { data } = await supabase
     .from("user_mountains")
-    .select("id, mountain_id, sort_order")
+    .select("id, mountain_id")
     .eq("user_id", user.id)
-    .eq("is_final_goal", false)
-    .order("sort_order")
-    .order("created_at");
-  const rows = data ?? [];
-  const i = rows.findIndex((r) => r.mountain_id === mountainId);
-  const j = direction === "up" ? i - 1 : i + 1;
-  if (i < 0 || j < 0 || j >= rows.length) return { ok: true };
+    .eq("is_final_goal", false);
+  const rowByMountain = new Map((data ?? []).map((r) => [r.mountain_id as string, r.id as string]));
+  const ids = entries.map((e) => e.mountainId);
+  const sameSet =
+    ids.length === rowByMountain.size && new Set(ids).size === ids.length && ids.every((id) => rowByMountain.has(id));
+  // Stale order (list changed in another tab) — ask the client to refresh.
+  if (!sameSet) return { ok: false, error: "Your list changed — refresh and try again." };
 
-  // Renumber so ties never block a swap, then swap the two.
-  const order = rows.map((r) => r.id as string);
-  [order[i], order[j]] = [order[j], order[i]];
   const results = await Promise.all(
-    order.map((id, n) => supabase.from("user_mountains").update({ sort_order: n + 1 }).eq("id", id).eq("user_id", user.id)),
+    entries.map((e, i) =>
+      supabase
+        .from("user_mountains")
+        .update({ sort_order: i + 1, stage: e.stage })
+        .eq("id", rowByMountain.get(e.mountainId)!)
+        .eq("user_id", user.id),
+    ),
   );
-  if (results.some((r) => r.error)) return { ok: false, error: "Couldn't reorder." };
+  if (results.some((r) => r.error)) return { ok: false, error: "Couldn't save the new order." };
   revalidateLists();
   return { ok: true };
 }
@@ -117,6 +141,13 @@ export async function setFinalGoal(mountainId: string): Promise<Result> {
       { onConflict: "user_id,mountain_id" },
     );
   if (error) return { ok: false, error: "Couldn't change your final objective." };
+  // If it was newly added to the list, give it a stage too.
+  await supabase
+    .from("user_mountains")
+    .update({ stage: await defaultStage(supabase, mountainId) })
+    .eq("user_id", user.id)
+    .eq("mountain_id", mountainId)
+    .is("stage", null);
   revalidateLists();
   return { ok: true };
 }
@@ -166,7 +197,12 @@ export async function createMountain(raw: unknown): Promise<Result> {
 
   await supabase
     .from("user_mountains")
-    .insert({ user_id: user.id, mountain_id: data.id, sort_order: await nextSortOrder(supabase, user.id) });
+    .insert({
+      user_id: user.id,
+      mountain_id: data.id,
+      sort_order: await nextSortOrder(supabase, user.id),
+      stage: stageForElevation(parsed.data.elevation),
+    });
 
   revalidateLists();
   return { ok: true, slug: data.slug };

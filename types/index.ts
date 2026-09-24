@@ -1,3 +1,5 @@
+import type { StageKey } from "@/lib/stages";
+
 // Domain types mirroring the Supabase schema (supabase/migrations).
 // Postgres numeric columns arrive as numbers or strings depending on the driver,
 // so queries normalise them with toNumber() before they reach components.
@@ -19,6 +21,9 @@ export interface Mountain {
   route_name: string | null;
   route_description: string | null;
   image_url: string | null;
+  /** Attribution for licensed photos, e.g. "Name · CC BY-SA 4.0 · Wikimedia Commons". */
+  image_credit: string | null;
+  image_credit_url: string | null;
   latitude: number | null;
   longitude: number | null;
   google_maps_url: string | null;
@@ -26,6 +31,8 @@ export interface Mountain {
   elevation_gain_m: number | null;
   sort_order: number;
   is_final_goal: boolean;
+  /** The hiker's stage for this mountain (only set on list entries from getUserList). */
+  stage?: StageKey | null;
 }
 
 export interface Profile {

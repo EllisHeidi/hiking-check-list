@@ -91,6 +91,18 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
               {mountain.elevation ? `${fmtInt(mountain.elevation)} m` : "Elevation TBC"}
               {mountain.region && <span className="text-stone-50/70"> · {mountain.region}</span>}
             </p>
+            {mountain.image_credit && (
+              <p className="mt-3 font-mono text-[0.65rem] tracking-[0.06em] text-stone-50/60">
+                Photo:{" "}
+                {mountain.image_credit_url ? (
+                  <a href={mountain.image_credit_url} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-stone-50 hover:underline">
+                    {mountain.image_credit}
+                  </a>
+                ) : (
+                  mountain.image_credit
+                )}
+              </p>
+            )}
             {aiCover && (
               <p className="mt-3 inline-flex items-center gap-1.5 font-mono text-[0.65rem] uppercase tracking-[0.16em] text-stone-50/70">
                 <Sparkles className="size-3.5" aria-hidden /> AI-generated image

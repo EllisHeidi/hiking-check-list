@@ -376,3 +376,30 @@ test("Final Objective follows each hiker's own final goal", async () => {
   await as(id, (tx) => tx.query(`update public.user_mountains set is_final_goal = false where user_id = $1`, [id]));
   assert.equal(await earned(), 0);
 });
+
+test("stages: starter list follows the suggested progression; stages are validated and protected", async () => {
+  const r = await db.query(
+    `select m.slug, um.stage, um.sort_order from public.user_mountains um join public.mountains m on m.id = um.mountain_id
+     where um.user_id = $1 and m.slug in ('leeukop', 'saaltjie', 'virgin-peak', 'sneeukop', 'towerkop') order by um.sort_order`,
+    [ALICE],
+  );
+  assert.deepEqual(
+    r.rows.map((x) => `${x.slug}:${x.stage}`),
+    ["leeukop:start", "saaltjie:build", "virgin-peak:advanced", "sneeukop:high", "towerkop:extreme"],
+  );
+  // Only the five stage keys are allowed.
+  await rejects(
+    as(ALICE, (tx) => tx.query(`update public.user_mountains set stage = 'expert' where user_id = $1`, [ALICE])),
+    /check constraint|violates/i,
+  );
+  // Hikers can move their own mountains between stages…
+  const moved = await as(ALICE, (tx) =>
+    tx.query(`update public.user_mountains set stage = 'build' where user_id = $1 and mountain_id = $2`, [ALICE, tableMountain]),
+  );
+  assert.equal(moved.affectedRows, 1);
+  // …but not change a catalogue mountain's starter stage.
+  const { rows } = await as(BOB, (tx) =>
+    tx.query(`insert into public.mountains (name, slug, starter_stage) values ('Kanonkop', 'kanonkop', 'extreme') returning starter_stage`),
+  );
+  assert.equal(rows[0].starter_stage, null);
+});

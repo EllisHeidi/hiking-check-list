@@ -3,9 +3,10 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { toNumber } from "@/lib/format";
 import type { Mountain } from "@/types";
+import { isStage, stageForElevation } from "@/lib/stages";
 
 export const MOUNTAIN_COLUMNS =
-  "id, created_by, is_starter, name, slug, elevation, region, country, difficulty, description, route_name, route_description, image_url, latitude, longitude, google_maps_url, distance_km, elevation_gain_m, sort_order, is_final_goal";
+  "id, created_by, is_starter, name, slug, elevation, region, country, difficulty, description, route_name, route_description, image_url, image_credit, image_credit_url, latitude, longitude, google_maps_url, distance_km, elevation_gain_m, sort_order, is_final_goal";
 
 export function normalizeMountain(row: Record<string, unknown>): Mountain {
   return {
@@ -17,16 +18,16 @@ export function normalizeMountain(row: Record<string, unknown>): Mountain {
 }
 
 /**
- * A hiker's personal kill list, in their order. `is_final_goal` and
- * `sort_order` on the returned mountains are the hiker's own (from
- * user_mountains), not the catalogue defaults. The final goal is always last.
- * RLS returns an empty list for private hikers you can't see.
+ * A hiker's personal kill list, in their order. `is_final_goal`, `sort_order`
+ * and `stage` are the hiker's own (from user_mountains), not the catalogue
+ * defaults. The final goal is always last. RLS returns an empty list for
+ * private hikers you can't see.
  */
 export const getUserList = cache(async (userId: string): Promise<Mountain[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("user_mountains")
-    .select(`sort_order, is_final_goal, mountain:mountains ( ${MOUNTAIN_COLUMNS} )`)
+    .select(`sort_order, is_final_goal, stage, mountain:mountains ( ${MOUNTAIN_COLUMNS} )`)
     .eq("user_id", userId)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
@@ -34,11 +35,15 @@ export const getUserList = cache(async (userId: string): Promise<Mountain[]> => 
 
   const list = (data ?? [])
     .filter((r) => r.mountain)
-    .map((r) => ({
-      ...normalizeMountain(r.mountain as unknown as Record<string, unknown>),
-      sort_order: r.sort_order as number,
-      is_final_goal: r.is_final_goal as boolean,
-    }));
+    .map((r) => {
+      const m = normalizeMountain(r.mountain as unknown as Record<string, unknown>);
+      return {
+        ...m,
+        sort_order: r.sort_order as number,
+        is_final_goal: r.is_final_goal as boolean,
+        stage: isStage(r.stage) ? r.stage : stageForElevation(m.elevation),
+      };
+    });
   return [...list.filter((m) => !m.is_final_goal), ...list.filter((m) => m.is_final_goal)];
 });
 

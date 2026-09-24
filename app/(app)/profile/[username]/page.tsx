@@ -9,7 +9,19 @@ import { ProfileView } from "@/components/profile/ProfileView";
 export async function generateMetadata({ params }: PageProps<"/profile/[username]">): Promise<Metadata> {
   const { username } = await params;
   const card = await getProfileCard(username);
-  return { title: card ? `${displayName(card)} (@${card.username})` : "Profile" };
+  if (!card) return { title: "Profile" };
+  const title = `${displayName(card)} (@${card.username})`;
+  const description = `Follow ${displayName(card)}'s road to the summit on Mountain Kill List.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      ...(card.avatar_url ? { images: [{ url: card.avatar_url }] } : {}),
+    },
+  };
 }
 
 // Publicly reachable (shareable). RLS decides what a visitor can see.

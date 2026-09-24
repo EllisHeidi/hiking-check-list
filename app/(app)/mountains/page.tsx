@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { getUserList } from "@/lib/queries/mountains";
 import { getHikesForUser } from "@/lib/queries/hikes";
 import { conqueredMountainIds, firstSummitDates, computeStats } from "@/lib/calculations/stats";
-import { Container, EmptyState, PageHeader, SectionHeading } from "@/components/ui/Section";
+import { Container, EmptyState, PageHeader } from "@/components/ui/Section";
 import { buttonClass } from "@/components/ui/styles";
 import { MountainCard, type MountainCompletion } from "@/components/mountains/MountainCard";
 import { FinalObjective } from "@/components/mountains/FinalObjective";
@@ -27,8 +27,6 @@ export default async function MountainsPage({ searchParams }: PageProps<"/mounta
   const order = new Map(mountains.map((m, i) => [m.id, i + 1]));
 
   const ladder = mountains.filter((m) => !m.is_final_goal);
-  const done = ladder.filter((m) => conquered.has(m.id));
-  const upcoming = ladder.filter((m) => !conquered.has(m.id));
   const finalGoal = mountains.find((m) => m.is_final_goal);
   const stats = computeStats(hikes, mountains);
 
@@ -78,32 +76,10 @@ export default async function MountainsPage({ searchParams }: PageProps<"/mounta
             <MountainMap mountains={mountains} conquered={conquered} />
           </div>
         ) : (
-          <div className="space-y-14 pb-16">
-            {done.length > 0 && (
-              <section>
-                <SectionHeading eyebrow={`${done.length} summits`} title="Conquered" />
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {done.map((m) => (
-                    <MountainCard key={m.id} mountain={m} completion={completion(m.id)} index={order.get(m.id)} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section>
-              <SectionHeading eyebrow={`${upcoming.length} remaining`} title="Upcoming" />
-              {upcoming.length ? (
-                <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 lg:grid-cols-3 xl:grid-cols-4">
-                  {upcoming.map((m) => (
-                    <div key={m.id} className="w-[82%] shrink-0 snap-start sm:w-auto">
-                      <MountainCard mountain={m} completion={completion(m.id)} index={order.get(m.id)} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-slate">Every Western Cape objective is done. One left.</p>
-              )}
-            </section>
+          <div className="grid gap-5 pb-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {ladder.map((m) => (
+              <MountainCard key={m.id} mountain={m} completion={completion(m.id)} index={order.get(m.id)} />
+            ))}
           </div>
         )}
       </Container>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { GripVertical, Plus } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getUserList } from "@/lib/queries/mountains";
 import { getHikesForUser } from "@/lib/queries/hikes";
@@ -8,6 +8,7 @@ import { conqueredMountainIds } from "@/lib/calculations/stats";
 import { Container, EmptyState, PageHeader } from "@/components/ui/Section";
 import { buttonClass } from "@/components/ui/styles";
 import { ManageListRow } from "@/components/mountains/ManageListRow";
+import { SortableList } from "@/components/mountains/SortableList";
 
 export const metadata: Metadata = { title: "Edit your list" };
 
@@ -29,7 +30,8 @@ export default async function ManageListPage() {
         </div>
       </PageHeader>
       <p className="-mt-2 mb-6 text-sm text-slate">
-        Reorder with the arrows, flag your final objective, or remove mountains. Removing a mountain never deletes hikes you&apos;ve logged on it.
+        Drag the <GripVertical className="inline size-4 align-text-bottom" aria-label="grip" /> handle to reorder, flag your final
+        objective, or remove mountains. Removing a mountain never deletes hikes you&apos;ve logged on it.
       </p>
 
       {list.length === 0 ? (
@@ -40,23 +42,17 @@ export default async function ManageListPage() {
         />
       ) : (
         <>
-          <ol className="divide-y divide-ink/10 border-y border-ink/10">
-            {ladder.map((m, i) => (
-              <ManageListRow
-                key={m.id}
-                mountain={m}
-                index={i + 1}
-                isFirst={i === 0}
-                isLast={i === ladder.length - 1}
-                conquered={conquered.has(m.id)}
-              />
-            ))}
-          </ol>
+          {/* Keyed on the server order so it resets after adds/removes/saves. */}
+          <SortableList
+            key={ladder.map((m) => m.id).join(",")}
+            mountains={ladder}
+            conqueredIds={[...conquered]}
+          />
 
-          <p className="eyebrow mt-10 mb-2">Final objective</p>
+          <p className="eyebrow mt-8 mb-2">Final objective</p>
           {finalGoal ? (
-            <ul className="border-y border-ink/10">
-              <ManageListRow mountain={finalGoal} index={null} isFirst isLast conquered={conquered.has(finalGoal.id)} />
+            <ul className="border-b border-ink/10">
+              <ManageListRow mountain={finalGoal} index={null} conquered={conquered.has(finalGoal.id)} />
             </ul>
           ) : (
             <p className="text-slate">None yet — tap the flag on any mountain above to set one.</p>
