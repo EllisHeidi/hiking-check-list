@@ -35,7 +35,7 @@ export function MountainCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
         <div className="absolute top-3 left-3">
-          <StatusBadge conquered={conquered} onImage />
+          <StatusBadge conquered={conquered} onImage count={completion?.timesClimbed ?? 0} />
         </div>
         {index != null && (
           <span className="absolute top-3 right-3 font-mono text-xs text-stone-50/80">

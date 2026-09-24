@@ -13,6 +13,8 @@ import { DashboardHero } from "@/components/dashboard/DashboardHero";
 import { NextObjective } from "@/components/dashboard/NextObjective";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { ElevationEquivalent } from "@/components/dashboard/ElevationEquivalent";
+import { StreakCard } from "@/components/dashboard/StreakCard";
+import { computeStreak } from "@/lib/calculations/streaks";
 import { Progression } from "@/components/mountains/Progression";
 import { FinalObjective } from "@/components/mountains/FinalObjective";
 import { ActivityRow } from "@/components/activity/ActivityItem";
@@ -33,6 +35,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
 
   const stats = computeStats(hikes, mountains);
   const conquered = conqueredMountainIds(hikes);
+  const summitCounts = new Map<string, number>();
+  for (const h of hikes) if (h.completed) summitCounts.set(h.mountain_id, (summitCounts.get(h.mountain_id) ?? 0) + 1);
   const next = nextObjective(mountains, conquered);
   const finalGoal = mountains.find((m) => m.is_final_goal);
 
@@ -62,6 +66,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
             )}
           </section>
 
+          <StreakCard streak={computeStreak(hikes)} />
           <ElevationEquivalent stats={stats} />
         </div>
 
@@ -69,7 +74,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
           <section>
             <SectionHeading eyebrow="Altitude ladder" title="Your progression" href="/mountains" linkLabel="Mountains" />
             {mountains.length ? (
-              <Progression mountains={mountains} conquered={conquered} compact />
+              <Progression mountains={mountains} conquered={conquered} summitCounts={summitCounts} compact />
             ) : (
               <p className="text-slate">
                 Your altitude ladder fills in as you{" "}

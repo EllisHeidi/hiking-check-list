@@ -4,6 +4,7 @@ import { getHikesForUser } from "./hikes";
 import { getUserList } from "./mountains";
 import { getAchievements, getEarnedAchievements } from "./achievements";
 import { computeStats } from "@/lib/calculations/stats";
+import { computeStreak } from "@/lib/calculations/streaks";
 
 /**
  * Everything a profile page needs. For private profiles (that aren't yours)
@@ -44,6 +45,7 @@ export async function getProfileView(username: string, viewerId: string | null) 
     following,
     hikes,
     stats: computeStats(hikes, mountains),
+    streak: computeStreak(hikes),
     /** Banner photo: the hiker's final objective, else the last mountain on their list with a photo. */
     cover: mountains.find((m) => m.is_final_goal && m.image_url) ?? [...mountains].reverse().find((m) => m.image_url) ?? null,
     achievements: achievements

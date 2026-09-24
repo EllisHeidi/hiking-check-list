@@ -10,7 +10,6 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/auth",
   "/setup",
-  "/hero-test",
 ];
 
 function isPublicPath(pathname: string) {

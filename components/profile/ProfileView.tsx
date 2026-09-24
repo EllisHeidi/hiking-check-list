@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Lock, Mountain as MountainIcon, Settings } from "lucide-react";
+import { Flame, Lock, Mountain as MountainIcon, Settings } from "lucide-react";
 import type { getProfileView } from "@/lib/queries/profile-view";
 import { displayName, fmtDec, fmtInt, fmtKm } from "@/lib/format";
 import { shortName } from "@/lib/calculations/stats";
@@ -105,6 +105,21 @@ export function ProfileView({ view, signedIn, back }: { view: View; signedIn: bo
               {fmtInt(view.stats.totalElevationM)}
               <Unit>m</Unit>
             </Stat>
+            <div className="col-span-2 flex items-center justify-between gap-4 bg-stone-50 px-4 py-3.5 sm:col-span-4">
+              <dt className="eyebrow">Weekly streak</dt>
+              <dd className="flex items-center gap-1.5 text-right">
+                <Flame
+                  className={`size-4 ${view.streak.current ? "fill-ember/20 text-ember" : "text-dune"}`}
+                  aria-hidden
+                />
+                <span className="font-medium">
+                  {view.streak.current} {view.streak.current === 1 ? "week" : "weeks"}
+                </span>
+                {view.streak.longest > view.streak.current && (
+                  <span className="ml-1 font-mono text-sm text-slate">best {view.streak.longest}</span>
+                )}
+              </dd>
+            </div>
             <div className="col-span-2 flex items-center justify-between gap-4 bg-stone-50 px-4 py-3.5 sm:col-span-4">
               <dt className="eyebrow">Highest summit</dt>
               <dd className="min-w-0 truncate text-right">

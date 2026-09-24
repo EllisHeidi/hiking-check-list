@@ -7,6 +7,9 @@ import { mapsUrl } from "@/lib/validation/mountain";
 import { requireUser } from "@/lib/auth";
 import { getMountainBySlug, getUserList } from "@/lib/queries/mountains";
 import { getHikesForMountain } from "@/lib/queries/hikes";
+import { getMountainLeaderboard } from "@/lib/queries/leaderboard";
+import { getFollowingIds } from "@/lib/queries/profiles";
+import { MountainLeaderboard } from "@/components/mountains/MountainLeaderboard";
 import { fmtDate, fmtInt, fmtKm } from "@/lib/format";
 import { Container, SectionHeading } from "@/components/ui/Section";
 import { buttonClass, onImageButtonClass } from "@/components/ui/styles";
@@ -31,7 +34,12 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
   const mountain = await getMountainBySlug(slug);
   if (!mountain) notFound();
 
-  const [hikes, list] = await Promise.all([getHikesForMountain(user.id, mountain.id), getUserList(user.id)]);
+  const [hikes, list, board, followingIds] = await Promise.all([
+    getHikesForMountain(user.id, mountain.id),
+    getUserList(user.id),
+    getMountainLeaderboard(mountain.id),
+    getFollowingIds(user.id),
+  ]);
   const listEntry = list.find((m) => m.id === mountain.id);
   const isFinal = Boolean(listEntry?.is_final_goal);
   const isCreator = mountain.created_by === user.id;
@@ -77,7 +85,7 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
           </div>
           <div className="pb-4">
             <div className="flex flex-wrap items-center gap-3">
-              <StatusBadge conquered={conquered} onImage />
+              <StatusBadge conquered={conquered} onImage count={summits.length} />
               {isFinal && (
                 <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-stone-50/80">Your final objective</span>
               )}
@@ -174,6 +182,20 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
             ) : (
               <p className="text-slate">You haven&apos;t logged a hike here yet.</p>
             )}
+          </section>
+
+          <section>
+            <SectionHeading
+              eyebrow={`${board.hikers} ${board.hikers === 1 ? "hiker" : "hikers"} · ${board.mostSummits.reduce((n, e) => n + e.summits, 0)} summits`}
+              title="Leaderboard"
+            />
+            <MountainLeaderboard
+              mostSummits={board.mostSummits}
+              fastest={board.fastest}
+              viewerId={user.id}
+              followingIds={followingIds}
+              mountainSlug={mountain.slug}
+            />
           </section>
         </div>
 

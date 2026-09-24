@@ -11,10 +11,13 @@ import { shortName } from "@/lib/calculations/stats";
 export function Progression({
   mountains,
   conquered,
+  summitCounts,
   compact = false,
 }: {
   mountains: Mountain[];
   conquered: Set<string>;
+  /** Summits per mountain id; shown as ×N when climbed more than once. */
+  summitCounts?: Map<string, number>;
   compact?: boolean;
 }) {
   const ladder = mountains.filter((m) => !m.is_final_goal);
@@ -50,6 +53,9 @@ export function Progression({
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className={`truncate font-medium ${done ? "text-ink" : "text-charcoal/80"}`}>{m.name}</span>
+                    {(summitCounts?.get(m.id) ?? 0) > 1 && (
+                      <span className="shrink-0 font-mono text-[0.65rem] text-ember">×{summitCounts!.get(m.id)}</span>
+                    )}
                     {isNext && (
                       <span className="shrink-0 font-mono text-[0.6rem] uppercase tracking-[0.16em] text-forest">Next</span>
                     )}

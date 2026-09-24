@@ -1,11 +1,21 @@
 import { Check, Circle } from "lucide-react";
 
-export function StatusBadge({ conquered, onImage = false }: { conquered: boolean; onImage?: boolean }) {
+export function StatusBadge({
+  conquered,
+  onImage = false,
+  count = 1,
+}: {
+  conquered: boolean;
+  onImage?: boolean;
+  /** Number of summits; shown as ×N when more than one. */
+  count?: number;
+}) {
   if (conquered) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-xs bg-ember px-2 py-1 font-mono text-[0.65rem] font-medium uppercase tracking-[0.16em] text-stone-50">
         <Check className="size-3" strokeWidth={3} aria-hidden />
         Conquered
+        {count > 1 && <span className="ml-0.5 opacity-90">×{count}</span>}
       </span>
     );
   }

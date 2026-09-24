@@ -8,6 +8,8 @@ import { fmtDate, fmtDec, fmtInt } from "@/lib/format";
 import { Container, PageHeader, SectionHeading } from "@/components/ui/Section";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { ElevationEquivalent } from "@/components/dashboard/ElevationEquivalent";
+import { StreakCard } from "@/components/dashboard/StreakCard";
+import { computeStreak } from "@/lib/calculations/streaks";
 import { BarChart } from "@/components/stats/BarChart";
 
 export const metadata: Metadata = { title: "Statistics" };
@@ -82,7 +84,10 @@ export default async function StatsPage() {
           )}
           <p className="mt-2 text-sm text-mist">Solid bars set a new personal high. Hover a bar for details.</p>
         </div>
-        <ElevationEquivalent stats={stats} />
+        <div className="space-y-8">
+          <StreakCard streak={computeStreak(hikes)} />
+          <ElevationEquivalent stats={stats} />
+        </div>
       </section>
     </Container>
   );
