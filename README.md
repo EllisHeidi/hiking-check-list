@@ -172,7 +172,7 @@ All stats are computed from the user's hikes in [`lib/calculations`](lib/calcula
 
 ### Map
 
-`components/map/MountainMap.tsx` is a lightweight SVG plot + list with Google Maps links. Its props (`mountains`, `conquered`) are the contract — replace the body with Leaflet/Mapbox without touching callers.
+`components/map/MountainMap.tsx` is an interactive **Leaflet** map (react-leaflet) with **OpenTopoMap** terrain tiles — free, no API key. It frames the main cluster of peaks; far-away objectives (e.g. Kilimanjaro) appear as "off the map" chips you can fly to. Approximate coordinates use dashed markers.
 
 ## Project structure
 

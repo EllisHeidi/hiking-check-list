@@ -73,7 +73,7 @@ export default async function MountainsPage({ searchParams }: PageProps<"/mounta
           </div>
         ) : view === "map" ? (
           <div className="pb-16">
-            <MountainMap mountains={mountains} conquered={conquered} />
+            <MountainMap mountains={mountains} conqueredIds={[...conquered]} />
           </div>
         ) : (
           <div className="grid gap-5 pb-16 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
