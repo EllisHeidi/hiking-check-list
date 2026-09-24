@@ -29,7 +29,8 @@ const usernameSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .regex(/^[a-z0-9_]{3,24}$/, "3–24 characters: letters, numbers and underscores.");
+  .regex(/^[a-z0-9_]{3,24}$/, "3–24 characters: letters, numbers and underscores.")
+  .refine((u) => u !== "edit", "That username is reserved.");
 
 export async function signIn(_: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();

@@ -1,11 +1,13 @@
 -- Mountain Kill List — Storage buckets and policies
 -- hike-photos: PRIVATE. Path {user_id}/{hike_id}/{file}. Served via signed URLs.
 -- avatars:     PUBLIC.  Path {user_id}/{file}.
+-- mountain-images: PUBLIC. Path {user_id}/{file}. Mountain cover photos.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('hike-photos', 'hike-photos', false, 10485760, array['image/jpeg', 'image/png', 'image/webp']),
-  ('avatars', 'avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+  ('avatars', 'avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/webp']),
+  ('mountain-images', 'mountain-images', true, 10485760, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
@@ -78,5 +80,27 @@ create policy "Users delete their own avatar"
   to authenticated
   using (
     bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- mountain-images ------------------------------------------------------------------
+create policy "Mountain images are publicly readable"
+  on storage.objects for select
+  to anon, authenticated
+  using (bucket_id = 'mountain-images');
+
+create policy "Users upload mountain images into their own folder"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'mountain-images'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create policy "Users delete their own mountain images"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'mountain-images'
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );

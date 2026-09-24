@@ -22,7 +22,7 @@ export function achievementProgress(
   let unit = "";
   switch (a.requirement_type) {
     case "mountains_completed":
-      current = stats.mountainsConquered;
+      current = stats.distinctSummits;
       unit = target === 1 ? " mountain" : " mountains";
       break;
     case "single_hike_km":

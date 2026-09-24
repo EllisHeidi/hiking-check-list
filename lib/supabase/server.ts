@@ -8,8 +8,9 @@ import { getSupabaseEnv } from "./env";
  * Create a new one per request — never share it between requests.
  */
 export async function createClient() {
-  const { url, anonKey } = getSupabaseEnv();
+  // Read cookies first: this marks the route as dynamic so it's never prerendered at build time.
   const cookieStore = await cookies();
+  const { url, anonKey } = getSupabaseEnv();
 
   return createServerClient(url, anonKey, {
     cookies: {

@@ -1,4 +1,6 @@
 import type { UserStats } from "@/types";
+import { shortName } from "@/lib/calculations/stats";
+import { fmtInt } from "@/lib/format";
 import { Container } from "@/components/ui/Section";
 
 export function DashboardHero({ stats, name }: { stats: UserStats; name: string }) {
@@ -11,9 +13,11 @@ export function DashboardHero({ stats, name }: { stats: UserStats; name: string 
           <br />
           Kill List
         </h1>
-        <p className="mt-4 text-xl text-charcoal sm:text-2xl">Your road to Kilimanjaro.</p>
+        <p className="mt-4 text-xl text-charcoal sm:text-2xl">
+          {stats.finalGoal ? <>Your road to {shortName(stats.finalGoal.name)}.</> : "Build your list. Pick your summit."}
+        </p>
         <p className="mt-1 font-mono text-xs uppercase tracking-[0.16em] text-slate">
-          Cape Town → Western Cape → 2,000 m+ → {stats.kilimanjaroElevation?.toLocaleString("en-US") ?? "5,895"} m
+          {stats.totalMountains} objectives{stats.finalGoal?.elevation ? ` → ${fmtInt(stats.finalGoal.elevation)} m` : ""}
         </p>
 
         <div className="mt-10 grid items-end gap-6 sm:grid-cols-[auto_1fr] sm:gap-10">
@@ -38,9 +42,8 @@ export function DashboardHero({ stats, name }: { stats: UserStats; name: string 
               {Array.from({ length: stats.totalMountains }, (_, i) => (
                 <span
                   key={i}
-                  className={`${i < stats.mountainsConquered ? "bg-ember" : "bg-ink/10"} ${
-                    i === stats.totalMountains - 1 ? "bg-ink/30" : ""
-                  } ${i < stats.mountainsConquered && i === stats.totalMountains - 1 ? "!bg-ember" : ""}`}
+                  className={`origin-left animate-grow ${i < stats.mountainsConquered ? "bg-ember" : "bg-ink/10"}`}
+                  style={{ animationDelay: `${i * 30}ms` }}
                 />
               ))}
             </div>

@@ -12,7 +12,8 @@ const profileSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .regex(/^[a-z0-9_]{3,24}$/, "Username: 3–24 letters, numbers or underscores."),
+    .regex(/^[a-z0-9_]{3,24}$/, "Username: 3–24 letters, numbers or underscores.")
+    .refine((u) => u !== "edit", "That username is reserved."),
   display_name: z.string().trim().max(60, "Name: 60 characters max."),
   bio: z.string().trim().max(280, "Bio: 280 characters max."),
   is_public: z.boolean(),

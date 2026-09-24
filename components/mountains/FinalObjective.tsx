@@ -1,10 +1,11 @@
-import Image from "next/image";
+import { MountainImage } from "@/components/mountains/MountainImage";
 import Link from "next/link";
 import type { Mountain } from "@/types";
 import { fmtInt } from "@/lib/format";
-import { buttonClass } from "@/components/ui/form";
+import { shortName } from "@/lib/calculations/stats";
+import { buttonClass } from "@/components/ui/styles";
 
-/** Full-bleed Kilimanjaro feature — visually separate from every other objective. */
+/** Full-bleed final-objective feature — visually separate from every other objective. */
 export function FinalObjective({
   mountain,
   conquered,
@@ -20,21 +21,18 @@ export function FinalObjective({
 
   return (
     <section className="relative isolate overflow-hidden bg-ink text-stone-50">
-      {mountain.image_url && (
-        <Image
-          src={mountain.image_url}
-          alt={`Summit slopes of ${mountain.name} at sunrise`}
-          fill
-          sizes="100vw"
-          className="-z-10 object-cover opacity-70"
-        />
-      )}
+      <MountainImage
+        src={mountain.image_url}
+        alt={`${mountain.name}${mountain.region ? `, ${mountain.region}` : ""}`}
+        sizes="100vw"
+        className="-z-10 opacity-70"
+      />
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink via-ink/40 to-ink/20" />
 
       <div className="mx-auto flex min-h-[34rem] max-w-7xl flex-col justify-end px-4 py-12 sm:px-6 sm:py-16 lg:px-10">
         <p className="eyebrow text-stone-50/70">The final objective</p>
         <h2 className="font-display mt-3 text-[clamp(4rem,16vw,11rem)]">
-          {mountain.name.replace(/^Mount\s+/i, "")}
+          {shortName(mountain.name)}
         </h2>
         <p className="mt-3 font-mono text-xl sm:text-2xl">
           {fmtInt(elevation)} m <span className="text-stone-50/60">· {mountain.country}{flag}</span>

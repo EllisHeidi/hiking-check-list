@@ -4,6 +4,7 @@
 
 alter table public.profiles enable row level security;
 alter table public.mountains enable row level security;
+alter table public.user_mountains enable row level security;
 alter table public.user_hikes enable row level security;
 alter table public.hike_photos enable row level security;
 alter table public.follows enable row level security;
@@ -29,6 +30,51 @@ create policy "Mountains are readable by everyone"
   on public.mountains for select
   to anon, authenticated
   using (true);
+
+-- Any hiker can add a mountain to the catalogue, as themselves.
+create policy "Hikers add mountains to the catalogue"
+  on public.mountains for insert
+  to authenticated
+  with check (created_by = (select auth.uid()));
+
+-- Only the creator edits their mountain; seeded mountains (created_by null) are
+-- maintained by the project owner in the dashboard.
+create policy "Creators edit their mountains"
+  on public.mountains for update
+  to authenticated
+  using (created_by = (select auth.uid()))
+  with check (created_by = (select auth.uid()));
+
+-- Creators can delete only while no one else lists or has hiked it.
+create policy "Creators delete unused mountains"
+  on public.mountains for delete
+  to authenticated
+  using (
+    created_by = (select auth.uid())
+    and not public.mountain_in_use_by_others(id)
+  );
+
+-- user_mountains (personal kill lists) -------------------------------------------
+create policy "Lists are visible to their owner or when the owner is public"
+  on public.user_mountains for select
+  to anon, authenticated
+  using (public.can_view_user(user_id));
+
+create policy "Hikers add to their own list"
+  on public.user_mountains for insert
+  to authenticated
+  with check (user_id = (select auth.uid()));
+
+create policy "Hikers reorder their own list"
+  on public.user_mountains for update
+  to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+create policy "Hikers remove from their own list"
+  on public.user_mountains for delete
+  to authenticated
+  using (user_id = (select auth.uid()));
 
 create policy "Achievement definitions are readable by everyone"
   on public.achievements for select

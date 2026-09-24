@@ -28,8 +28,28 @@ create trigger user_hikes_set_updated_at
 -- Profile creation on signup. Username comes from signup metadata and is
 -- normalised + de-duplicated here so signup can never fail on a clash.
 -- ---------------------------------------------------------------------------
-create or replace function public.handle_new_user()
-returns trigger
+-- Give a hiker the starter kill list (the seeded progression), once — only if
+-- their list is empty, so it never re-adds mountains they removed.
+create or replace function public.seed_starter_list(p_user uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.user_mountains where user_id = p_user) then
+    return;
+  end if;
+  insert into public.user_mountains (user_id, mountain_id, sort_order, is_final_goal)
+  select p_user, m.id, m.sort_order, m.is_final_goal
+  from public.mountains m
+  where m.is_starter
+  on conflict (user_id, mountain_id) do nothing;
+end;
+$$;
+
+create or replace function public.create_profile_for(p_id uuid, p_email text, p_meta jsonb)
+returns void
 language plpgsql
 security definer
 set search_path = ''
@@ -39,9 +59,13 @@ declare
   candidate text;
   n integer := 0;
 begin
+  if exists (select 1 from public.profiles where id = p_id) then
+    return;
+  end if;
+
   base := lower(coalesce(
-    nullif(new.raw_user_meta_data ->> 'username', ''),
-    split_part(new.email, '@', 1),
+    nullif(p_meta ->> 'username', ''),
+    split_part(p_email, '@', 1),
     'hiker'
   ));
   base := regexp_replace(base, '[^a-z0-9_]', '', 'g');
@@ -58,10 +82,24 @@ begin
 
   insert into public.profiles (id, username, display_name)
   values (
-    new.id,
+    p_id,
     candidate,
-    left(nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''), 60)
-  );
+    left(nullif(trim(p_meta ->> 'display_name'), ''), 60)
+  )
+  on conflict (id) do nothing;
+
+  perform public.seed_starter_list(p_id);
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.create_profile_for(new.id, new.email, coalesce(new.raw_user_meta_data, '{}'::jsonb));
   return new;
 end;
 $$;
@@ -69,6 +107,29 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Self-heal: create the caller's profile if it's missing (e.g. the account was
+-- created before this migration ran). Only ever acts on auth.uid().
+create or replace function public.ensure_profile()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    return;
+  end if;
+  perform public.create_profile_for(u.id, u.email, coalesce(u.raw_user_meta_data, '{}'::jsonb))
+  from auth.users u
+  where u.id = auth.uid();
+end;
+$$;
+
+-- Backfill profiles for accounts that signed up before this migration.
+select public.create_profile_for(u.id, u.email, coalesce(u.raw_user_meta_data, '{}'::jsonb))
+from auth.users u
+where not exists (select 1 from public.profiles p where p.id = u.id);
 
 -- ---------------------------------------------------------------------------
 -- Visibility helper used by RLS: you can see yourself, and anyone public.
@@ -115,10 +176,12 @@ begin
     coalesce(sum(h.elevation_gain_m), 0),
     coalesce(max(h.distance_km), 0),
     coalesce(max(m.elevation) filter (where h.completed), 0),
-    coalesce(bool_or(h.completed and m.is_final_goal), false)
+    coalesce(bool_or(h.completed and um.is_final_goal), false)
   into v_mountains, v_total_km, v_total_gain, v_longest, v_highest, v_final
   from public.user_hikes h
   join public.mountains m on m.id = h.mountain_id
+  -- The final objective is personal: whatever this hiker marked on their list.
+  left join public.user_mountains um on um.user_id = h.user_id and um.mountain_id = h.mountain_id
   where h.user_id = p_user;
 
   select coalesce(array_agg(a.id), '{}')
@@ -201,6 +264,114 @@ create trigger user_hikes_after_change
   after insert or update or delete on public.user_hikes
   for each row execute function public.handle_user_hike_change();
 
+-- Changing your final objective can earn/revoke the Final Objective achievement.
+create or replace function public.handle_user_mountain_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'DELETE' then
+    if old.is_final_goal then
+      perform public.sync_user_achievements(old.user_id);
+    end if;
+  elsif tg_op = 'INSERT' then
+    if new.is_final_goal then
+      perform public.sync_user_achievements(new.user_id);
+    end if;
+  elsif new.is_final_goal is distinct from old.is_final_goal then
+    perform public.sync_user_achievements(new.user_id);
+  end if;
+  return null;
+end;
+$$;
+
+create trigger user_mountains_after_change
+  after insert or update or delete on public.user_mountains
+  for each row execute function public.handle_user_mountain_change();
+
+-- ---------------------------------------------------------------------------
+-- Catalogue helpers
+-- ---------------------------------------------------------------------------
+
+-- API users can't touch the starter-list columns or ownership. Requests with a
+-- JWT (auth.uid() set) get these forced; the dashboard / migrations (no JWT)
+-- can still curate the starter list.
+create or replace function public.guard_mountain_columns()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+  if tg_op = 'INSERT' then
+    new.created_by := auth.uid();
+    new.is_starter := false;
+    new.is_final_goal := false;
+    new.sort_order := 0;
+  else
+    new.created_by := old.created_by;
+    new.is_starter := old.is_starter;
+    new.is_final_goal := old.is_final_goal;
+    new.sort_order := old.sort_order;
+    new.slug := old.slug;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger mountains_guard_columns
+  before insert or update on public.mountains
+  for each row execute function public.guard_mountain_columns();
+
+-- True when anyone other than the caller has this mountain on their list or has
+-- logged a hike on it. Used to stop creators deleting mountains others rely on.
+-- SECURITY DEFINER so private users' rows are counted too.
+create or replace function public.mountain_in_use_by_others(p_mountain uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.user_mountains
+    where mountain_id = p_mountain and user_id is distinct from auth.uid()
+  ) or exists (
+    select 1 from public.user_hikes
+    where mountain_id = p_mountain and user_id is distinct from auth.uid()
+  );
+$$;
+
+-- Set a mountain's cover photo. Allowed for the mountain's creator, or for
+-- anyone when the mountain has no cover yet. The URL must point at the caller's
+-- own folder in the public mountain-images bucket.
+create or replace function public.set_mountain_image(p_mountain uuid, p_url text)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    return false;
+  end if;
+  if p_url !~ ('/storage/v1/object/public/mountain-images/' || v_uid::text || '/[A-Za-z0-9._-]+$') then
+    return false;
+  end if;
+  update public.mountains
+  set image_url = p_url
+  where id = p_mountain
+    and (created_by = v_uid or image_url is null or image_url = '');
+  return found;
+end;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- RPCs exposed to the app
 -- ---------------------------------------------------------------------------
@@ -274,6 +445,16 @@ $$;
 
 -- Internal functions must not be callable through the API.
 revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.create_profile_for(uuid, text, jsonb) from public, anon, authenticated;
+revoke execute on function public.seed_starter_list(uuid) from public, anon, authenticated;
+revoke execute on function public.guard_mountain_columns() from public, anon, authenticated;
+revoke execute on function public.handle_user_mountain_change() from public, anon, authenticated;
+revoke execute on function public.set_mountain_image(uuid, text) from public, anon;
+grant execute on function public.set_mountain_image(uuid, text) to authenticated;
+grant execute on function public.mountain_in_use_by_others(uuid) to authenticated;
+revoke execute on function public.mountain_in_use_by_others(uuid) from public, anon;
+revoke execute on function public.ensure_profile() from public, anon;
+grant execute on function public.ensure_profile() to authenticated;
 revoke execute on function public.handle_user_hike_change() from public, anon, authenticated;
 revoke execute on function public.sync_user_achievements(uuid) from public, anon, authenticated;
 revoke execute on function public.set_updated_at() from public, anon, authenticated;

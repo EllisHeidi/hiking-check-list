@@ -19,13 +19,17 @@ export function firstSummitDates(hikes: Hike[]): Map<string, string> {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
- * Every dashboard/profile statistic, derived from the user's hikes.
- * Distance and elevation count every logged hike (including turned-back
- * attempts); conquered/highest only count completed summits.
+ * Every dashboard/profile statistic, derived from the hiker's hikes and their
+ * personal list. Distance and elevation count every logged hike (including
+ * turned-back attempts); conquered/highest only count completed summits.
  * Mirrors public.sync_user_achievements() in the database.
  */
-export function computeStats(hikes: Hike[], mountains: Pick<Mountain, "is_final_goal" | "elevation">[]): UserStats {
+export function computeStats(
+  hikes: Hike[],
+  list: Pick<Mountain, "id" | "name" | "is_final_goal" | "elevation">[],
+): UserStats {
   const conquered = conqueredMountainIds(hikes);
+  const onListConquered = list.filter((m) => conquered.has(m.id)).length;
   const totalDistanceKm = hikes.reduce((s, h) => s + (h.distance_km ?? 0), 0);
   const totalElevationM = hikes.reduce((s, h) => s + (h.elevation_gain_m ?? 0), 0);
   const withDistance = hikes.filter((h) => h.distance_km != null);
@@ -40,27 +44,32 @@ export function computeStats(hikes: Hike[], mountains: Pick<Mountain, "is_final_
     }
   }
 
-  const kilimanjaroElevation = mountains.find((m) => m.is_final_goal)?.elevation ?? null;
+  const goal = list.find((m) => m.is_final_goal);
+  const finalGoal = goal ? { id: goal.id, name: goal.name, elevation: goal.elevation } : null;
 
   return {
-    mountainsConquered: conquered.size,
-    totalMountains: mountains.length,
-    percentComplete: mountains.length ? Math.round((conquered.size / mountains.length) * 100) : 0,
+    mountainsConquered: onListConquered,
+    totalMountains: list.length,
+    percentComplete: list.length ? Math.round((onListConquered / list.length) * 100) : 0,
+    distinctSummits: conquered.size,
     totalHikes: hikes.length,
     totalDistanceKm: round1(totalDistanceKm),
     totalElevationM: Math.round(totalElevationM),
     highestSummit,
     longestHikeKm: round1(longestHikeKm),
     averageDistanceKm: withDistance.length ? round1(totalDistanceKm / withDistance.length) : 0,
-    kilimanjaroElevation,
-    kilimanjaroMultiple: kilimanjaroElevation
-      ? Math.round((totalElevationM / kilimanjaroElevation) * 100) / 100
+    finalGoal,
+    finalGoalMultiple: finalGoal?.elevation
+      ? Math.round((totalElevationM / finalGoal.elevation) * 100) / 100
       : 0,
   };
 }
 
-/** First mountain in progression order not yet conquered; the final goal only once everything else is done. */
-export function nextObjective(mountains: Mountain[], conquered: Set<string>): Mountain | null {
-  const remaining = mountains.filter((m) => !conquered.has(m.id));
+/** First mountain on the list not yet conquered; the final goal only once everything else is done. */
+export function nextObjective(list: Mountain[], conquered: Set<string>): Mountain | null {
+  const remaining = list.filter((m) => !conquered.has(m.id));
   return remaining.find((m) => !m.is_final_goal) ?? remaining[0] ?? null;
 }
+
+/** Strip a leading "Mount " for big display headings ("Mount Kilimanjaro" → "Kilimanjaro"). */
+export const shortName = (name: string) => name.replace(/^(Mount|Mt\.?)\s+/i, "");

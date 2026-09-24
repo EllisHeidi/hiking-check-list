@@ -261,3 +261,118 @@ test("storage: avatars only in your own folder", async () => {
     as(BOB, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${ALICE}/evil.jpg`])),
   );
 });
+
+test("ensure_profile heals accounts created before the database was set up", async () => {
+  const id = "00000000-0000-4000-8000-0000000000ee";
+  await db.exec(`alter table auth.users disable trigger on_auth_user_created`);
+  await db.query(
+    `insert into auth.users (id, email, raw_user_meta_data) values ($1, 'early@example.com', '{"username":"early_bird"}')`,
+    [id],
+  );
+  await db.exec(`alter table auth.users enable trigger on_auth_user_created`);
+  assert.equal((await db.query(`select 1 from public.profiles where id = $1`, [id])).rows.length, 0);
+
+  // Anonymous callers and other users can't create it for them.
+  await as(null, (tx) => tx.query(`select public.ensure_profile()`)).catch(() => {});
+  await as(BOB, (tx) => tx.query(`select public.ensure_profile()`));
+  assert.equal((await db.query(`select 1 from public.profiles where id = $1`, [id])).rows.length, 0);
+
+  await as(id, (tx) => tx.query(`select public.ensure_profile()`));
+  const r = await db.query(`select username from public.profiles where id = $1`, [id]);
+  assert.equal(r.rows[0].username, "early_bird");
+});
+
+test("new hikers start with the 20-mountain starter list, Kilimanjaro as final", async () => {
+  const r = await db.query(
+    `select count(*)::int n, count(*) filter (where um.is_final_goal)::int f,
+            max(m.slug) filter (where um.is_final_goal) final_slug
+     from public.user_mountains um join public.mountains m on m.id = um.mountain_id
+     where um.user_id = $1`,
+    [ALICE],
+  );
+  assert.deepEqual(r.rows[0], { n: 20, f: 1, final_slug: "kilimanjaro" });
+});
+
+test("hikers edit only their own list", async () => {
+  const del = await as(BOB, (tx) => tx.query(`delete from public.user_mountains where user_id = $1`, [ALICE]));
+  assert.equal(del.affectedRows, 0);
+  await rejects(
+    as(BOB, (tx) => tx.query(`insert into public.user_mountains (user_id, mountain_id) values ($1, $2)`, [ALICE, tableMountain])),
+  );
+  const own = await as(BOB, (tx) => tx.query(`delete from public.user_mountains where user_id = $1 and mountain_id = $2`, [BOB, sneeuberg]));
+  assert.equal(own.affectedRows, 1);
+  await as(BOB, (tx) => tx.query(`insert into public.user_mountains (mountain_id, sort_order) values ($1, 99)`, [sneeuberg]));
+  // Only one final objective per hiker.
+  await rejects(
+    as(BOB, (tx) => tx.query(`update public.user_mountains set is_final_goal = true where user_id = $1 and mountain_id = $2`, [BOB, sneeuberg])),
+    /duplicate key|unique/i,
+  );
+});
+
+test("catalogue: hikers add mountains as themselves and can't touch the starter list", async () => {
+  const m = await as(ALICE, (tx) =>
+    tx.query(
+      `insert into public.mountains (name, slug, created_by, is_starter, is_final_goal, sort_order)
+       values ('Lion''s Head', 'lions-head', $1, true, true, 1) returning *`,
+      [BOB],
+    ),
+  );
+  const row = m.rows[0];
+  assert.equal(row.created_by, ALICE, "created_by forced to the caller");
+  assert.equal(row.is_starter, false);
+  assert.equal(row.is_final_goal, false);
+
+  // Bob can't edit Alice's mountain; nobody can edit a seeded one through the API.
+  assert.equal((await as(BOB, (tx) => tx.query(`update public.mountains set name = 'x' where id = $1`, [row.id]))).affectedRows, 0);
+  assert.equal((await as(ALICE, (tx) => tx.query(`update public.mountains set name = 'x' where id = $1`, [tableMountain]))).affectedRows, 0);
+
+  // Alice can edit hers, but can't flip it into the starter list.
+  await as(ALICE, (tx) => tx.query(`update public.mountains set elevation = 669, is_starter = true where id = $1`, [row.id]));
+  const after = await db.query(`select elevation, is_starter from public.mountains where id = $1`, [row.id]);
+  assert.deepEqual(after.rows[0], { elevation: 669, is_starter: false });
+
+  // Once Bob lists it, Alice can no longer delete it.
+  await as(BOB, (tx) => tx.query(`insert into public.user_mountains (mountain_id) values ($1)`, [row.id]));
+  assert.equal((await as(ALICE, (tx) => tx.query(`delete from public.mountains where id = $1`, [row.id]))).affectedRows, 0);
+  await as(BOB, (tx) => tx.query(`delete from public.user_mountains where mountain_id = $1`, [row.id]));
+  assert.equal((await as(ALICE, (tx) => tx.query(`delete from public.mountains where id = $1`, [row.id]))).affectedRows, 1);
+});
+
+test("set_mountain_image: creator, or anyone when there's no cover; only own storage folder", async () => {
+  const base = "https://x.supabase.co/storage/v1/object/public/mountain-images";
+  const { rows } = await as(ALICE, (tx) =>
+    tx.query(`insert into public.mountains (name, slug) values ('Kasteelberg', 'kasteelberg') returning id`),
+  );
+  const id = rows[0].id;
+  const set = (uid, url) => as(uid, (tx) => tx.query(`select public.set_mountain_image($1, $2) ok`, [id, url]));
+
+  assert.equal((await set(BOB, `${base}/${ALICE}/a.jpg`)).rows[0].ok, false, "not Bob's folder");
+  assert.equal((await set(BOB, `${base}/${BOB}/b.jpg`)).rows[0].ok, true, "no cover yet → anyone");
+  assert.equal((await set(BOB, `${base}/${BOB}/c.jpg`)).rows[0].ok, false, "cover exists → only creator");
+  assert.equal((await set(ALICE, `${base}/${ALICE}/d.jpg`)).rows[0].ok, true, "creator can replace");
+  assert.equal((await set(ALICE, `https://evil.example/${ALICE}/e.jpg`)).rows[0].ok, false);
+  // Seeded mountains already have covers, so nobody can replace them.
+  const seeded = await as(BOB, (tx) => tx.query(`select public.set_mountain_image($1, $2) ok`, [tableMountain, `${base}/${BOB}/f.jpg`]));
+  assert.equal(seeded.rows[0].ok, false);
+});
+
+test("Final Objective follows each hiker's own final goal", async () => {
+  const id = "00000000-0000-4000-8000-0000000000f1";
+  await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'f@example.com', '{"username":"finaltest"}')`, [id]);
+  // Make Table Mountain their final objective, then summit it.
+  await as(id, async (tx) => {
+    await tx.query(`update public.user_mountains set is_final_goal = false where user_id = $1`, [id]);
+    await tx.query(`update public.user_mountains set is_final_goal = true where user_id = $1 and mountain_id = $2`, [id, tableMountain]);
+  });
+  await logHike(id, tableMountain);
+  const earned = async () =>
+    (await db.query(
+      `select 1 from public.user_achievements ua join public.achievements a on a.id = ua.achievement_id
+       where ua.user_id = $1 and a.slug = 'final-objective'`,
+      [id],
+    )).rows.length;
+  assert.equal(await earned(), 1);
+  // Moving the final goal elsewhere revokes it.
+  await as(id, (tx) => tx.query(`update public.user_mountains set is_final_goal = false where user_id = $1`, [id]));
+  assert.equal(await earned(), 0);
+});

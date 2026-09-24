@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { toNumber } from "@/lib/format";
 import type { Mountain } from "@/types";
 
-const MOUNTAIN_COLUMNS =
-  "id, name, slug, elevation, region, country, difficulty, description, route_name, route_description, image_url, latitude, longitude, google_maps_url, distance_km, elevation_gain_m, sort_order, is_final_goal";
+export const MOUNTAIN_COLUMNS =
+  "id, created_by, is_starter, name, slug, elevation, region, country, difficulty, description, route_name, route_description, image_url, latitude, longitude, google_maps_url, distance_km, elevation_gain_m, sort_order, is_final_goal";
 
-function normalize(row: Record<string, unknown>): Mountain {
+export function normalizeMountain(row: Record<string, unknown>): Mountain {
   return {
     ...(row as unknown as Mountain),
     latitude: toNumber(row.latitude),
@@ -16,16 +16,42 @@ function normalize(row: Record<string, unknown>): Mountain {
   };
 }
 
-/** All mountains in progression order. */
-export const getMountains = cache(async (): Promise<Mountain[]> => {
+/**
+ * A hiker's personal kill list, in their order. `is_final_goal` and
+ * `sort_order` on the returned mountains are the hiker's own (from
+ * user_mountains), not the catalogue defaults. The final goal is always last.
+ * RLS returns an empty list for private hikers you can't see.
+ */
+export const getUserList = cache(async (userId: string): Promise<Mountain[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("mountains")
-    .select(MOUNTAIN_COLUMNS)
-    .order("sort_order", { ascending: true });
-  if (error) throw new Error(`Could not load mountains: ${error.message}`);
-  return (data ?? []).map(normalize);
+    .from("user_mountains")
+    .select(`sort_order, is_final_goal, mountain:mountains ( ${MOUNTAIN_COLUMNS} )`)
+    .eq("user_id", userId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`Could not load your list: ${error.message}`);
+
+  const list = (data ?? [])
+    .filter((r) => r.mountain)
+    .map((r) => ({
+      ...normalizeMountain(r.mountain as unknown as Record<string, unknown>),
+      sort_order: r.sort_order as number,
+      is_final_goal: r.is_final_goal as boolean,
+    }));
+  return [...list.filter((m) => !m.is_final_goal), ...list.filter((m) => m.is_final_goal)];
 });
+
+/** The shared catalogue, optionally filtered by name/region. */
+export async function searchCatalogue(query = "", limit = 60): Promise<Mountain[]> {
+  const supabase = await createClient();
+  let q = supabase.from("mountains").select(MOUNTAIN_COLUMNS).order("name").limit(limit);
+  const term = query.trim().replace(/[%_,()]/g, "");
+  if (term) q = q.or(`name.ilike.%${term}%,region.ilike.%${term}%,country.ilike.%${term}%`);
+  const { data, error } = await q;
+  if (error) throw new Error(`Could not load mountains: ${error.message}`);
+  return (data ?? []).map(normalizeMountain);
+}
 
 export const getMountainBySlug = cache(async (slug: string): Promise<Mountain | null> => {
   const supabase = await createClient();
@@ -35,5 +61,12 @@ export const getMountainBySlug = cache(async (slug: string): Promise<Mountain | 
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error(`Could not load mountain: ${error.message}`);
-  return data ? normalize(data) : null;
+  return data ? normalizeMountain(data) : null;
 });
+
+/** Mountains for the hike form: your list first, then the rest of the catalogue. */
+export async function getHikeFormMountains(userId: string) {
+  const [list, catalogue] = await Promise.all([getUserList(userId), searchCatalogue("", 500)]);
+  const onList = new Set(list.map((m) => m.id));
+  return { list, others: catalogue.filter((m) => !onList.has(m.id)) };
+}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, Check } from "lucide-react";
 import type { Mountain } from "@/types";
 import { fmtInt } from "@/lib/format";
+import { shortName } from "@/lib/calculations/stats";
 
 /**
  * Altitude ladder: every objective as a bar scaled to its elevation, with the
@@ -61,7 +62,7 @@ export function Progression({
                   </div>
                 </div>
 
-                <span className={`font-mono text-sm tabular-nums ${done ? "text-ink" : "text-mist"}`}>
+                <span className={`w-20 text-right font-mono text-sm tabular-nums ${done ? "text-ink" : "text-mist"}`}>
                   {m.elevation ? `${fmtInt(m.elevation)} m` : "— m"}
                 </span>
               </Link>
@@ -87,7 +88,7 @@ export function Progression({
           >
             <div>
               <p className="eyebrow text-stone-50/60">{conquered.has(finalGoal.id) ? "✓ Conquered" : "Final objective"}</p>
-              <p className="font-display mt-1 text-4xl sm:text-5xl">{finalGoal.name.replace(/^Mount\s+/i, "")}</p>
+              <p className="font-display mt-1 text-4xl sm:text-5xl">{shortName(finalGoal.name)}</p>
             </div>
             <p className="font-mono text-lg tabular-nums sm:text-xl">
               {finalGoal.elevation ? `${fmtInt(finalGoal.elevation)} m` : "— m"}

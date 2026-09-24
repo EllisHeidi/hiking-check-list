@@ -44,8 +44,29 @@ export function MountainMap({ mountains, conquered }: MountainMapProps) {
         )
       : null;
 
+  // Greedy label placement: right of the marker, else left, else hover-only.
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
+  const labels = new Map<string, { x: number; anchor: "start" | "end" }>();
+  const hits = (b: { x: number; y: number; w: number; h: number }) =>
+    placed.some((p) => b.x < p.x + p.w && b.x + b.w > p.x && b.y < p.y + p.h && b.y + b.h > p.y);
+  for (const m of [...local].sort((a, b) => Number(conquered.has(b.id)) - Number(conquered.has(a.id)))) {
+    const px = x(m.longitude!);
+    const py = y(m.latitude!);
+    const w = m.name.length * 6.4;
+    placed.push({ x: px - 8, y: py - 12, w: 16, h: 14 });
+    const right = { x: px + 10, y: py - 8, w, h: 12 };
+    const left = { x: px - 10 - w, y: py - 8, w, h: 12 };
+    if (right.x + w < W && !hits(right)) {
+      placed.push(right);
+      labels.set(m.id, { x: px + 10, anchor: "start" });
+    } else if (left.x > 0 && !hits(left)) {
+      placed.push(left);
+      labels.set(m.id, { x: px - 10, anchor: "end" });
+    }
+  }
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid items-start gap-8 lg:grid-cols-[1.4fr_1fr]">
       <figure className="topo relative overflow-hidden rounded-sm border border-ink/10 bg-stone-50">
         {local.length > 0 ? (
           <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="Map of Western Cape objectives">
@@ -59,13 +80,16 @@ export function MountainMap({ mountains, conquered }: MountainMapProps) {
                     className={done ? "fill-ember" : "fill-none stroke-forest"}
                     strokeWidth={1.5}
                   />
-                  <text
-                    x={x(m.longitude!) + 10}
-                    y={y(m.latitude!) + 1}
-                    className="fill-charcoal font-mono text-[10px]"
-                  >
-                    {m.name}
-                  </text>
+                  {labels.has(m.id) && (
+                    <text
+                      x={labels.get(m.id)!.x}
+                      y={y(m.latitude!) + 1}
+                      textAnchor={labels.get(m.id)!.anchor}
+                      className="fill-charcoal font-mono text-[10px]"
+                    >
+                      {m.name}
+                    </text>
+                  )}
                 </a>
               );
             })}

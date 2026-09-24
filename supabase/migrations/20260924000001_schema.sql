@@ -17,11 +17,15 @@ create table public.profiles (
 );
 
 -- ---------------------------------------------------------------------------
--- mountains: shared, editable mountain database (the UI never hardcodes this)
+-- mountains: the shared catalogue. Seeded rows have created_by = null; any
+-- signed-in hiker can add more. is_starter / sort_order / is_final_goal define
+-- the starter kill list new accounts begin with.
 -- ---------------------------------------------------------------------------
 create table public.mountains (
   id uuid primary key default gen_random_uuid(),
-  name text not null,
+  created_by uuid references public.profiles (id) on delete set null,
+  is_starter boolean not null default false,
+  name text not null check (char_length(name) between 2 and 80),
   slug text unique not null check (slug ~ '^[a-z0-9-]+$'),
   elevation integer check (elevation > 0),
   region text,
@@ -40,6 +44,24 @@ create table public.mountains (
   is_final_goal boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+-- ---------------------------------------------------------------------------
+-- user_mountains: each hiker's personal kill list (which mountains, in what
+-- order, and which one is their final objective).
+-- ---------------------------------------------------------------------------
+create table public.user_mountains (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references public.profiles (id) on delete cascade,
+  mountain_id uuid not null references public.mountains (id) on delete cascade,
+  sort_order integer not null default 0,
+  is_final_goal boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (user_id, mountain_id)
+);
+
+-- At most one final objective per hiker.
+create unique index user_mountains_one_final_goal
+  on public.user_mountains (user_id) where is_final_goal;
 
 -- ---------------------------------------------------------------------------
 -- user_hikes: one row per hike. Many hikes per mountain are allowed.
@@ -131,6 +153,10 @@ create table public.activity (
 -- profiles.username already has a unique index; this one serves prefix search.
 create index profiles_username_pattern_idx on public.profiles (username text_pattern_ops);
 create index mountains_sort_order_idx on public.mountains (sort_order);
+create index mountains_created_by_idx on public.mountains (created_by);
+create index mountains_name_idx on public.mountains (lower(name) text_pattern_ops);
+create index user_mountains_user_id_idx on public.user_mountains (user_id, sort_order);
+create index user_mountains_mountain_id_idx on public.user_mountains (mountain_id);
 create index user_hikes_user_id_idx on public.user_hikes (user_id);
 create index user_hikes_mountain_id_idx on public.user_hikes (mountain_id);
 create index user_hikes_completion_date_idx on public.user_hikes (completion_date desc);

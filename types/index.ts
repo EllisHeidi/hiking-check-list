@@ -6,6 +6,9 @@ export type Difficulty = "Easy" | "Moderate" | "Hard" | "Strenuous" | "Extreme" 
 
 export interface Mountain {
   id: string;
+  /** null for seeded mountains; otherwise the hiker who added it to the catalogue. */
+  created_by: string | null;
+  is_starter: boolean;
   name: string;
   slug: string;
   elevation: number | null;
@@ -110,15 +113,21 @@ export interface ProfileCard {
 }
 
 export interface UserStats {
+  /** Mountains on the hiker's list that they've summited. */
   mountainsConquered: number;
+  /** Size of the hiker's list. */
   totalMountains: number;
   percentComplete: number;
+  /** Distinct mountains summited, on the list or not. */
+  distinctSummits: number;
   totalHikes: number;
   totalDistanceKm: number;
   totalElevationM: number;
   highestSummit: { name: string; elevation: number; slug: string } | null;
   longestHikeKm: number;
   averageDistanceKm: number;
-  kilimanjaroMultiple: number;
-  kilimanjaroElevation: number | null;
+  /** The hiker's own final objective. */
+  finalGoal: { name: string; elevation: number | null; id: string } | null;
+  /** Total elevation gained ÷ final objective's elevation. */
+  finalGoalMultiple: number;
 }

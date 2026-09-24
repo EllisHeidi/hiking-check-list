@@ -26,7 +26,11 @@ function isPublicPath(pathname: string) {
  */
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured()) {
-    if (request.nextUrl.pathname === "/setup") return NextResponse.next();
+    // Without keys, only static pages can render: setup + the auth screens.
+    const { pathname } = request.nextUrl;
+    if (["/setup", "/login", "/register", "/forgot-password"].includes(pathname)) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
