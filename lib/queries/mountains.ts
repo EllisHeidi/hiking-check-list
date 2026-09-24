@@ -5,8 +5,9 @@ import { toNumber } from "@/lib/format";
 import type { Mountain } from "@/types";
 import { isStage, stageForElevation } from "@/lib/stages";
 
-export const MOUNTAIN_COLUMNS =
-  "id, created_by, is_starter, name, slug, elevation, region, country, difficulty, description, route_name, route_description, image_url, image_credit, image_credit_url, latitude, longitude, google_maps_url, distance_km, elevation_gain_m, sort_order, is_final_goal";
+// "*" so newer optional columns (coordinate_accuracy, verification_note, …)
+// never break a database that hasn't run the latest migration yet.
+export const MOUNTAIN_COLUMNS = "*";
 
 export function normalizeMountain(row: Record<string, unknown>): Mountain {
   return {
@@ -53,7 +54,7 @@ export async function searchCatalogue(query = "", limit = 60): Promise<Mountain[
   // The seeded progression first (in its order), then hiker-added mountains A–Z.
   let q = supabase
     .from("mountains")
-    .select(`${MOUNTAIN_COLUMNS}, starter_stage`)
+    .select(MOUNTAIN_COLUMNS)
     .order("is_starter", { ascending: false })
     .order("sort_order")
     .order("name")

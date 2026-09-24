@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { BackLink } from "./BackLink";
 
 export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
   return <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 ${className}`}>{children}</div>;
@@ -55,9 +56,21 @@ export function EmptyState({ title, body, action }: { title: string; body: strin
   );
 }
 
-export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  back,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  /** Show "← Back"; the href is used when there's no in-app history (e.g. opened from a link). */
+  back?: string;
+  children?: ReactNode;
+}) {
   return (
-    <header className="pt-8 pb-6 sm:pt-12">
+    <header className={back ? "pt-3 pb-6 sm:pt-6" : "pt-8 pb-6 sm:pt-12"}>
+      {back && <BackLink fallback={back} className="mb-4" />}
       {eyebrow && <p className="eyebrow">{eyebrow}</p>}
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-5xl sm:text-7xl">{title}</h1>

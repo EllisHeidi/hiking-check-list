@@ -21,7 +21,7 @@ export default async function ManageListPage() {
 
   return (
     <Container className="max-w-2xl pb-16">
-      <PageHeader eyebrow={`${list.length} objectives`} title="Edit your list">
+      <PageHeader eyebrow={`${list.length} objectives`} title="Edit your list" back="/mountains">
         <div className="flex gap-2">
           <Link href="/mountains" className={buttonClass.secondary}>Done</Link>
           <Link href="/mountains/add" className={buttonClass.primary}>

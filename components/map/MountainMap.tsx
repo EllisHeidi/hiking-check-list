@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink, MapPin } from "lucide-react";
 import type { Mountain } from "@/types";
 import { fmtInt } from "@/lib/format";
+import { mapsUrl } from "@/lib/validation/mountain";
 
 /**
  * V1 map: a lightweight SVG plot of the Western Cape objectives by lat/lng,
@@ -9,7 +10,7 @@ import { fmtInt } from "@/lib/format";
  * body for a Leaflet/Mapbox map later without touching callers.
  */
 export interface MountainMapProps {
-  mountains: Pick<Mountain, "id" | "name" | "slug" | "elevation" | "latitude" | "longitude" | "google_maps_url" | "is_final_goal" | "region">[];
+  mountains: Pick<Mountain, "id" | "name" | "slug" | "elevation" | "latitude" | "longitude" | "coordinate_accuracy" | "is_final_goal" | "region">[];
   conquered: Set<string>;
 }
 
@@ -113,11 +114,13 @@ export function MountainMap({ mountains, conquered }: MountainMapProps) {
               {m.name}
             </Link>
             <span className="font-mono text-xs text-mist">
-              {m.latitude != null ? `${m.latitude.toFixed(2)}, ${m.longitude?.toFixed(2)}` : "no coords"}
+              {m.latitude != null && m.longitude != null
+                ? `${m.coordinate_accuracy === "approximate" ? "≈ " : ""}${m.latitude.toFixed(2)}, ${m.longitude.toFixed(2)}`
+                : "no coords"}
             </span>
-            {m.google_maps_url && (
+            {(
               <a
-                href={m.google_maps_url}
+                href={mapsUrl(m)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex size-11 items-center justify-center text-slate hover:text-forest"

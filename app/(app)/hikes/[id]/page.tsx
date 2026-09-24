@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ImagePlus, Pencil } from "lucide-react";
+import { ImagePlus, Pencil } from "lucide-react";
+import { BackLink } from "@/components/ui/BackLink";
 import { requireUser } from "@/lib/auth";
 import { getHike } from "@/lib/queries/hikes";
 import { resolveUnlocked } from "@/lib/queries/unlocked";
@@ -41,12 +42,7 @@ export default async function HikePage({ params, searchParams }: PageProps<"/hik
         )}
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/90 via-ink/30 to-ink/30" />
         <Container className="flex min-h-[55svh] flex-col justify-between py-6">
-          <Link
-            href={isOwner ? "/hikes" : `/mountains/${hike.mountain.slug}`}
-            className="inline-flex min-h-11 w-fit items-center gap-2 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-stone-50/80 hover:text-stone-50"
-          >
-            <ArrowLeft className="size-4" aria-hidden /> {isOwner ? "My hikes" : hike.mountain.name}
-          </Link>
+          <BackLink fallback={isOwner ? "/hikes" : `/mountains/${hike.mountain.slug}`} variant="onImage" className="w-fit" />
           <div className="pb-2">
             <StatusBadge conquered={hike.completed} onImage />
             <h1 className="font-display mt-4 text-[clamp(3rem,12vw,8rem)]">{hike.mountain.name}</h1>

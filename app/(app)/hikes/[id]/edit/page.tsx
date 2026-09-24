@@ -17,7 +17,7 @@ export default async function EditHikePage({ params }: PageProps<"/hikes/[id]/ed
 
   return (
     <Container className="max-w-2xl pb-16">
-      <PageHeader eyebrow={hike.mountain.name} title="Edit hike" />
+      <PageHeader eyebrow={hike.mountain.name} title="Edit hike" back={`/hikes/${hike.id}`} />
       <HikeForm
         mountains={mountains}
         today={new Date().toISOString().slice(0, 10)}

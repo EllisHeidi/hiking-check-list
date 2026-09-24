@@ -20,7 +20,7 @@ export default async function AddMountainsPage({ searchParams }: PageProps<"/mou
 
   return (
     <Container className="max-w-3xl pb-16">
-      <PageHeader eyebrow="The catalogue" title="Add mountains">
+      <PageHeader eyebrow="The catalogue" title="Add mountains" back="/mountains">
         <Link href="/mountains/new" className={buttonClass.primary}>
           <Plus className="size-4" aria-hidden /> New mountain
         </Link>

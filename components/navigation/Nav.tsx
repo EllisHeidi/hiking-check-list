@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -13,7 +14,8 @@ export function DesktopNav({ user }: { user: NavUser }) {
   return (
     <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/75">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-4 sm:px-6 lg:px-10">
-        <Link href="/" className="font-display shrink-0 text-2xl tracking-wide">
+        <Link href="/" className="font-display flex shrink-0 items-center gap-2.5 text-2xl tracking-wide">
+          <Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 rounded-sm" priority />
           Mountain Kill List
         </Link>
 

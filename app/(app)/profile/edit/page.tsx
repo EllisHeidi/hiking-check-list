@@ -9,7 +9,7 @@ export default async function EditProfilePage() {
   const profile = await requireProfile("/profile/edit");
   return (
     <Container className="max-w-xl pb-16">
-      <PageHeader eyebrow="Settings" title="Edit profile" />
+      <PageHeader eyebrow="Settings" title="Edit profile" back="/profile" />
       <ProfileEditForm profile={profile} />
     </Container>
   );

@@ -15,3 +15,7 @@ export const buttonClass = {
   ghost:
     "inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-3 font-mono text-xs uppercase tracking-[0.16em] text-slate transition-colors hover:text-ink disabled:opacity-60",
 };
+
+/** Compact outlined button for use on top of photos (hero headers). */
+export const onImageButtonClass =
+  "inline-flex min-h-11 items-center gap-2 rounded-sm border border-stone-50/45 bg-ink/35 px-3.5 font-mono text-xs font-medium uppercase tracking-[0.16em] text-stone-50 backdrop-blur-sm transition-colors hover:border-stone-50 hover:bg-stone-50 hover:text-ink";

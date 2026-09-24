@@ -30,5 +30,5 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
   const user = await getCurrentUser();
   const view = await getProfileView(decodeURIComponent(username), user?.id ?? null);
   if (!view) notFound();
-  return <ProfileView view={view} signedIn={Boolean(user)} />;
+  return <ProfileView view={view} signedIn={Boolean(user)} back="/activity" />;
 }

@@ -418,3 +418,30 @@ test("profile banners: only you can set yours", async () => {
     as(BOB, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${ALICE}/banner-evil.jpg`])),
   );
 });
+
+test("coordinates: every seeded mountain has coordinates + accuracy; conflicting names are flagged", async () => {
+  const r = await db.query(
+    `select slug, latitude, longitude, coordinate_accuracy, verification_note, google_maps_url
+     from public.mountains where is_starter order by sort_order`,
+  );
+  assert.equal(r.rows.length, 20);
+  for (const m of r.rows) {
+    assert.ok(m.latitude != null && m.longitude != null, `${m.slug} has coordinates`);
+    assert.ok(["verified", "approximate"].includes(m.coordinate_accuracy), `${m.slug} has an accuracy`);
+    assert.ok(
+      m.google_maps_url.endsWith(`query=${Number(m.latitude)},${Number(m.longitude)}`) ||
+        m.google_maps_url.endsWith(`query=${m.latitude},${m.longitude}`),
+      `${m.slug} maps link opens at its coordinates`,
+    );
+  }
+  const flagged = r.rows.filter((m) => m.verification_note).map((m) => m.slug).sort();
+  assert.deepEqual(flagged, ["guardian-peak", "sterrekykerskop"]);
+  // The accuracy field only accepts the two values.
+  await rejects(
+    db.transaction(async (tx) => {
+      await tx.query(`select set_config('request.jwt.claims', '{}', true)`);
+      await tx.query(`update public.mountains set coordinate_accuracy = 'exact' where slug = 'leeukop'`);
+    }),
+    /check constraint|violates/i,
+  );
+});

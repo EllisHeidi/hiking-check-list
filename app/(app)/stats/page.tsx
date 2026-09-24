@@ -35,7 +35,7 @@ export default async function StatsPage() {
 
   return (
     <Container className="pb-16">
-      <PageHeader eyebrow="Last 12 months & all time" title="Statistics" />
+      <PageHeader eyebrow="Last 12 months & all time" title="Statistics" back="/hikes" />
 
       <section>
         <StatsGrid stats={stats} extended />

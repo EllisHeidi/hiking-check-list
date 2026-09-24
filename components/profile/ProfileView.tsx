@@ -11,6 +11,7 @@ import { Avatar } from "./Avatar";
 import { FollowButton } from "./FollowButton";
 import { ShareProfileButton } from "./ShareProfileButton";
 import { BannerControls } from "./BannerControls";
+import { BackLink } from "@/components/ui/BackLink";
 import { AchievementBadge } from "@/components/achievements/AchievementBadge";
 
 type View = NonNullable<Awaited<ReturnType<typeof getProfileView>>>;
@@ -18,7 +19,7 @@ type View = NonNullable<Awaited<ReturnType<typeof getProfileView>>>;
 // Two equal buttons on phones; natural width from sm up.
 const actionBtn = "w-full min-w-0 px-3 sm:w-auto sm:px-6";
 
-export function ProfileView({ view, signedIn }: { view: View; signedIn: boolean }) {
+export function ProfileView({ view, signedIn, back }: { view: View; signedIn: boolean; back?: string }) {
   const { card } = view;
   const name = displayName(card);
   const cover = view.visible ? view.cover : null;
@@ -27,8 +28,9 @@ export function ProfileView({ view, signedIn }: { view: View; signedIn: boolean 
 
   return (
     <Container className="pb-16">
+      {back && <BackLink fallback={back} className="mt-3 mb-3 sm:mt-4" />}
       {/* Banner: full-bleed on phones, rounded card from sm up. */}
-      <div className="relative -mx-4 h-36 overflow-hidden bg-forest sm:mx-0 sm:mt-8 sm:h-52 sm:rounded-sm">
+      <div className={`relative -mx-4 h-36 overflow-hidden bg-forest sm:mx-0 sm:h-52 sm:rounded-sm ${back ? "sm:mt-2" : "sm:mt-8"}`}>
         {customBanner ? (
           <Image src={customBanner} alt={`${name}'s banner photo`} fill priority sizes="(min-width: 1280px) 1200px, 100vw" className="object-cover" />
         ) : cover ? (
@@ -46,11 +48,14 @@ export function ProfileView({ view, signedIn }: { view: View; signedIn: boolean 
         {view.isSelf && <BannerControls hasCustom={Boolean(customBanner)} />}
       </div>
 
-      <header className="relative pb-8">
-        <div className="-mt-12 flex items-end justify-between gap-4 sm:-mt-16">
-          <Avatar profile={card} size={104} className="ring-4 ring-paper shadow-card" />
-          {/* Desktop actions sit beside the avatar. */}
-          <div className="hidden gap-2 pb-1 sm:flex">
+      {/* From sm up the header is inset from the banner edges, like a profile card. */}
+      <header className="relative pb-8 sm:px-8">
+        <div className="-mt-12 flex items-end justify-between gap-4 sm:-mt-[4.25rem] sm:items-start">
+          {/* Half-overlapping the banner: 104px on phones, 136px from sm up. */}
+          <Avatar profile={card} size={104} className="ring-4 ring-paper shadow-card sm:hidden" />
+          <Avatar profile={card} size={136} className="hidden ring-4 ring-paper shadow-card sm:inline-flex" />
+          {/* Desktop actions sit beside the avatar, just below the banner. */}
+          <div className="hidden gap-2 sm:mt-[5.25rem] sm:flex">
             <Actions view={view} signedIn={signedIn} name={name} />
           </div>
         </div>

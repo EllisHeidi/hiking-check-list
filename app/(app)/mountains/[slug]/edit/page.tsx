@@ -16,7 +16,7 @@ export default async function EditMountainPage({ params }: PageProps<"/mountains
 
   return (
     <Container className="max-w-2xl pb-16">
-      <PageHeader eyebrow="Catalogue" title={`Edit ${mountain.name}`} />
+      <PageHeader eyebrow="Catalogue" title={`Edit ${mountain.name}`} back={`/mountains/${mountain.slug}`} />
       <MountainForm mountain={mountain} />
     </Container>
   );

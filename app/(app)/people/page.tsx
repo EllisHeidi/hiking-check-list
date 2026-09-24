@@ -25,7 +25,7 @@ export default async function PeoplePage({ searchParams }: PageProps<"/people">)
 
   return (
     <Container className="max-w-2xl pb-16">
-      <PageHeader eyebrow="Social" title="Find hikers" />
+      <PageHeader eyebrow="Social" title="Find hikers" back="/activity" />
       <Form action="/people" className="flex gap-2">
         <label htmlFor="q" className="sr-only">
           Search by username or name

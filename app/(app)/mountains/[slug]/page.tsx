@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { MountainImage } from "@/components/mountains/MountainImage";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, MapPin, Pencil, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, BadgeCheck, ExternalLink, MapPin, Pencil, Plus, Sparkles } from "lucide-react";
+import { mapsUrl } from "@/lib/validation/mountain";
 import { requireUser } from "@/lib/auth";
 import { getMountainBySlug, getUserList } from "@/lib/queries/mountains";
 import { getHikesForMountain } from "@/lib/queries/hikes";
 import { fmtDate, fmtInt, fmtKm } from "@/lib/format";
 import { Container, SectionHeading } from "@/components/ui/Section";
-import { buttonClass } from "@/components/ui/styles";
+import { buttonClass, onImageButtonClass } from "@/components/ui/styles";
+import { BackLink } from "@/components/ui/BackLink";
 import { StatusBadge } from "@/components/mountains/StatusBadge";
 import { HikeRow } from "@/components/hikes/HikeRow";
 import { ListControls } from "@/components/mountains/ListControls";
@@ -33,6 +35,8 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
   const listEntry = list.find((m) => m.id === mountain.id);
   const isFinal = Boolean(listEntry?.is_final_goal);
   const isCreator = mountain.created_by === user.id;
+  const hasCoords = mountain.latitude != null && mountain.longitude != null;
+  const approximate = mountain.coordinate_accuracy === "approximate";
   const canSetCover = !mountain.image_url || isCreator;
   const aiCover = Boolean(mountain.image_url?.includes("/mountain-images/") && mountain.image_url.includes("/ai-"));
   const summits = hikes.filter((h) => h.completed);
@@ -61,16 +65,11 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/90 via-ink/25 to-ink/30" />
         <Container className="flex min-h-[70svh] flex-col justify-between py-6 sm:min-h-[36rem]">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <Link
-              href="/mountains"
-              className="inline-flex min-h-11 w-fit items-center gap-2 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-stone-50/80 hover:text-stone-50"
-            >
-              <ArrowLeft className="size-4" aria-hidden /> The list
-            </Link>
+            <BackLink fallback="/mountains" variant="onImage" />
             {isCreator && (
               <Link
                 href={`/mountains/${mountain.slug}/edit`}
-                className="inline-flex min-h-11 items-center gap-2 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-stone-50/80 hover:text-stone-50"
+                className={onImageButtonClass}
               >
                 <Pencil className="size-4" aria-hidden /> Edit mountain
               </Link>
@@ -119,6 +118,12 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
 
       <Container className="grid gap-12 py-10 lg:grid-cols-[1.5fr_1fr] lg:gap-16 lg:py-14">
         <div className="space-y-12">
+          {mountain.verification_note && (
+            <div role="note" className="flex gap-3 rounded-sm border border-ember/40 bg-ember/5 p-4">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-ember" aria-hidden />
+              <p className="text-sm text-charcoal">{mountain.verification_note}</p>
+            </div>
+          )}
           <ListControls mountainId={mountain.id} onList={Boolean(listEntry)} isFinal={isFinal} />
           <div
             className={`flex flex-wrap items-center justify-between gap-4 rounded-sm border p-5 ${
@@ -183,25 +188,39 @@ export default async function MountainPage({ params }: PageProps<"/mountains/[sl
           </dl>
 
           <section className="rounded-sm border border-ink/10 bg-stone-50 p-5">
-            <p className="eyebrow flex items-center gap-2">
-              <MapPin className="size-3.5" aria-hidden /> Location
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="eyebrow flex items-center gap-2">
+                <MapPin className="size-3.5" aria-hidden /> Location
+              </p>
+              {hasCoords && mountain.coordinate_accuracy === "verified" && (
+                <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] uppercase tracking-[0.14em] text-forest">
+                  <BadgeCheck className="size-3.5" aria-hidden /> Verified
+                </span>
+              )}
+              {hasCoords && approximate && (
+                <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-earth">≈ Approximate</span>
+              )}
+            </div>
             <p className="mt-3 font-mono text-lg">
-              {mountain.latitude != null && mountain.longitude != null
-                ? `${mountain.latitude.toFixed(4)}°, ${mountain.longitude.toFixed(4)}°`
+              {hasCoords
+                ? approximate
+                  ? `≈ ${mountain.latitude!.toFixed(2)}°, ${mountain.longitude!.toFixed(2)}°`
+                  : `${mountain.latitude!.toFixed(4)}°, ${mountain.longitude!.toFixed(4)}°`
                 : "Coordinates not set"}
             </p>
-            <p className="mt-1 text-sm text-mist">{[mountain.region, mountain.country].filter(Boolean).join(", ")}</p>
-            {mountain.google_maps_url && (
-              <a
-                href={mountain.google_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${buttonClass.secondary} mt-5 w-full`}
-              >
-                Open in Google Maps <ExternalLink className="size-4" aria-hidden />
-              </a>
+            {hasCoords && approximate && (
+              <p className="mt-1 text-sm text-earth">Approximate area — not the exact summit.</p>
             )}
+            <p className="mt-1 text-sm text-mist">{[mountain.region, mountain.country].filter(Boolean).join(", ")}</p>
+            <a
+              href={mapsUrl(mountain)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${buttonClass.secondary} mt-5 w-full`}
+            >
+              {hasCoords ? (approximate ? "Open area in Google Maps" : "Open in Google Maps") : "Search Google Maps"}
+              <ExternalLink className="size-4" aria-hidden />
+            </a>
           </section>
         </aside>
       </Container>

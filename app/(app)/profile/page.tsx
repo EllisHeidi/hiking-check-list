@@ -7,6 +7,7 @@ import { signOut } from "@/lib/actions/auth";
 import { Container } from "@/components/ui/Section";
 import { buttonClass } from "@/components/ui/styles";
 import { ProfileView } from "@/components/profile/ProfileView";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -20,6 +21,7 @@ export default async function MyProfilePage() {
       <ProfileView view={view} signedIn />
       <Container className="pb-16">
         <div className="grid grid-cols-2 gap-2 border-t border-ink/15 pt-6 sm:grid-cols-4">
+          <InstallAppButton className="col-span-2 w-full sm:col-span-4" />
           <Link href="/achievements" className={buttonClass.secondary}>
             <Trophy className="size-4" aria-hidden /> Achievements
           </Link>

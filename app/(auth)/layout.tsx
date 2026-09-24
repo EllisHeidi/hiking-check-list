@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 const HERO =
   "https://images.unsplash.com/photo-1609198092458-38a293c7ac4b?auto=format&fit=crop&w=1600&q=80";
@@ -24,10 +25,14 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       </aside>
 
       <main className="flex flex-col px-4 py-8 sm:px-10">
-        <Link href="/login" className="font-display text-2xl tracking-wide">
+        <Link href="/login" className="font-display flex w-fit items-center gap-2.5 text-2xl tracking-wide">
+          <Image src="/icons/icon-192.png" alt="" width={36} height={36} className="size-9 rounded-sm" priority />
           Mountain Kill List
         </Link>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">{children}</div>
+        <div className="mx-auto w-full max-w-sm">
+          <InstallAppButton className="w-full" />
+        </div>
       </main>
     </div>
   );

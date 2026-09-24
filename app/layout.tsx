@@ -17,6 +17,9 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: { default: "Mountain Kill List", template: "%s · Mountain Kill List" },
   description: "Conquer mountains. Build your elevation. Reach the next summit.",
+  applicationName: "Mountain Kill List",
+  // iPhone "Add to Home Screen": full-screen app named "Kill List".
+  appleWebApp: { capable: true, title: "Kill List", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

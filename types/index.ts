@@ -31,6 +31,10 @@ export interface Mountain {
   elevation_gain_m: number | null;
   sort_order: number;
   is_final_goal: boolean;
+  /** "verified" = checked summit coordinates; "approximate" = area only. */
+  coordinate_accuracy?: "verified" | "approximate" | null;
+  /** Set when the record needs manual checking (e.g. conflicting names). */
+  verification_note?: string | null;
   /** The hiker's stage for this mountain (only set on list entries from getUserList). */
   stage?: StageKey | null;
 }

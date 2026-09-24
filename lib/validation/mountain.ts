@@ -37,10 +37,14 @@ export function slugify(name: string) {
   );
 }
 
+/**
+ * Google Maps link. Always opens at the exact coordinates when we have them;
+ * only falls back to a place-name search when a mountain has no coordinates.
+ */
 export function mapsUrl(m: { name: string; region: string | null; latitude: number | null; longitude: number | null }) {
-  const q =
-    m.latitude != null && m.longitude != null
-      ? `${m.latitude},${m.longitude}`
-      : [m.name, m.region].filter(Boolean).join(" ");
+  if (m.latitude != null && m.longitude != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${Number(m.latitude)},${Number(m.longitude)}`;
+  }
+  const q = [m.name, m.region].filter(Boolean).join(" ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }

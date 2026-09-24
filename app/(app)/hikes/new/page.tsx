@@ -13,7 +13,7 @@ export default async function NewHikePage({ searchParams }: PageProps<"/hikes/ne
 
   return (
     <Container className="max-w-2xl pb-16">
-      <PageHeader eyebrow="New entry" title="Log a hike" />
+      <PageHeader eyebrow="New entry" title="Log a hike" back="/hikes" />
       <HikeForm
         mountains={mountains}
         defaultMountainId={preselected}

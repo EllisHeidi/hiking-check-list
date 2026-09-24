@@ -33,7 +33,7 @@ export default async function AchievementsPage() {
 
   return (
     <Container className="pb-16">
-      <PageHeader eyebrow={`${unlocked.length} of ${achievements.length} earned`} title="Achievements" />
+      <PageHeader eyebrow={`${unlocked.length} of ${achievements.length} earned`} title="Achievements" back="/profile" />
       <p className="-mt-2 mb-10 max-w-prose text-slate">
         Awarded automatically every time you log a hike. No claiming, no streaks — just the mountains.
       </p>
