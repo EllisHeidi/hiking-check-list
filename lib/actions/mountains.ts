@@ -32,8 +32,10 @@ async function nextSortOrder(supabase: Awaited<ReturnType<typeof createClient>>,
 }
 
 async function defaultStage(supabase: Awaited<ReturnType<typeof createClient>>, mountainId: string) {
-  const { data } = await supabase.from("mountains").select("elevation").eq("id", mountainId).maybeSingle();
-  return stageForElevation((data?.elevation as number | null | undefined) ?? null);
+  // Progression mountains keep their suggested stage; others get one from elevation.
+  const { data } = await supabase.from("mountains").select("*").eq("id", mountainId).maybeSingle();
+  const suggested = (data as { starter_stage?: unknown } | null)?.starter_stage;
+  return isStage(suggested) ? suggested : stageForElevation((data?.elevation as number | null | undefined) ?? null);
 }
 
 // --- Your list -------------------------------------------------------------

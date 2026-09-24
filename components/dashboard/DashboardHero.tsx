@@ -1,7 +1,10 @@
 import type { UserStats } from "@/types";
 import { shortName } from "@/lib/calculations/stats";
 import { fmtInt } from "@/lib/format";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Container } from "@/components/ui/Section";
+import { buttonClass } from "@/components/ui/styles";
 
 export function DashboardHero({ stats, name }: { stats: UserStats; name: string }) {
   return (
@@ -17,10 +20,28 @@ export function DashboardHero({ stats, name }: { stats: UserStats; name: string 
           {stats.finalGoal ? <>Your road to {shortName(stats.finalGoal.name)}.</> : "Conquer mountains. Build your elevation."}
         </p>
         <p className="mt-1 font-mono text-xs uppercase tracking-[0.16em] text-slate">
-          {stats.totalMountains} {stats.totalMountains === 1 ? "objective" : "objectives"} on your list
+          {stats.totalMountains === 0
+            ? "Your list starts here"
+            : `${stats.totalMountains} ${stats.totalMountains === 1 ? "objective" : "objectives"} on your list`}
           {stats.finalGoal?.elevation ? ` → ${fmtInt(stats.finalGoal.elevation)} m` : ""}
         </p>
 
+        {stats.totalMountains === 0 ? (
+          <div className="mt-10 max-w-xl border-l-2 border-ember pl-5">
+            <p className="font-display text-4xl sm:text-5xl">Build your kill list</p>
+            <p className="mt-2 text-slate">
+              Pick the mountains you want to conquer — start with the Western Cape progression or add your own peaks.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Link href="/mountains/add" className={buttonClass.primary}>
+                <Plus className="size-4" aria-hidden /> Add mountains
+              </Link>
+              <Link href="/mountains/new" className={buttonClass.secondary}>
+                Create a mountain
+              </Link>
+            </div>
+          </div>
+        ) : (
         <div className="mt-10 grid items-end gap-6 sm:grid-cols-[auto_1fr] sm:gap-10">
           <p className="font-display text-7xl tabular-nums sm:text-8xl">
             {stats.mountainsConquered}
@@ -50,6 +71,7 @@ export function DashboardHero({ stats, name }: { stats: UserStats; name: string 
             </div>
           </div>
         </div>
+        )}
       </Container>
     </section>
   );

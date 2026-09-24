@@ -89,7 +89,7 @@ export function ProfileView({ view, signedIn }: { view: View; signedIn: boolean 
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-sm border border-ink/10 bg-ink/10 sm:grid-cols-4">
             <Stat label="Mountains" accent>
               {view.stats.mountainsConquered}
-              <span className="text-[0.5em] text-mist"> / {view.stats.totalMountains}</span>
+              {view.stats.totalMountains > 0 && <span className="text-[0.5em] text-mist"> / {view.stats.totalMountains}</span>}
             </Stat>
             <Stat label="Hikes">{view.stats.totalHikes}</Stat>
             <Stat label="Distance">

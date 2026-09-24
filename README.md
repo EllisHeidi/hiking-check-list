@@ -70,7 +70,7 @@ npx supabase db push              # applies migrations
 `setup.sql` (Option A) already includes the seeds. With the CLI (Option B), paste the files in [`supabase/seed`](supabase/seed) into the SQL Editor and run them.
 
 - `01_mountains.sql` — the 20 starter objectives, in progression order
-- `03_starter_lists.sql` — gives existing accounts the starter list
+- `03_starter_lists.sql` — applies the suggested order/stages/descriptions to the seeded progression
 - `02_achievements.sql` — the 14 achievement definitions
 
 **The mountain data is starter data, not authoritative.** Some elevations are `NULL` (unknown) and most coordinates are approximate. The UI never hardcodes mountain data — fix anything in Supabase → Table Editor → `mountains` and the app updates. Hikers can also add their own mountains in the app. Row 19 (`groot-winterhoek`) is a placeholder for your "additional Western Cape objective". Seeds use `on conflict do nothing`, so re-running them never overwrites your corrections.
@@ -135,7 +135,7 @@ Redeploy after adding or changing variables — `NEXT_PUBLIC_*` values are inlin
 ### Personal kill lists
 
 - `mountains` is a **shared catalogue**. Any signed-in hiker can add a mountain (`/mountains/new`); only its creator can edit it, and only while nobody else lists or has hiked it can they delete it. Seeded mountains (`created_by` null) are curated by you in the Supabase dashboard.
-- `user_mountains` is each hiker's **own list**: which mountains, their order, and one **final objective**. New accounts start with the starter list (catalogue rows with `is_starter = true`).
+- `user_mountains` is each hiker's **own list**: which mountains, their order, and one **final objective**. New accounts start with an **empty** list and add mountains from the catalogue; the seeded progression (`is_starter = true`) is listed first on the Add mountains page.
 - Manage it at `/mountains/manage` (reorder, flag final objective, remove) and `/mountains/add` (search the catalogue). Removing a mountain never deletes logged hikes.
 - Progress ("5 / 20") counts your list. The Final Objective achievement follows whichever mountain you flag.
 

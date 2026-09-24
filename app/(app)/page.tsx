@@ -68,7 +68,14 @@ export default async function DashboardPage({ searchParams }: PageProps<"/">) {
         <div className="space-y-12">
           <section>
             <SectionHeading eyebrow="Altitude ladder" title="Your progression" href="/mountains" linkLabel="Mountains" />
-            <Progression mountains={mountains} conquered={conquered} compact />
+            {mountains.length ? (
+              <Progression mountains={mountains} conquered={conquered} compact />
+            ) : (
+              <p className="text-slate">
+                Your altitude ladder fills in as you{" "}
+                <Link href="/mountains/add" className="text-forest underline underline-offset-4">add mountains to your list</Link>.
+              </p>
+            )}
           </section>
 
           <section>

@@ -282,22 +282,29 @@ test("ensure_profile heals accounts created before the database was set up", asy
   assert.equal(r.rows[0].username, "early_bird");
 });
 
-test("new hikers start with the 20-mountain starter list, Kilimanjaro as final", async () => {
-  const r = await db.query(
-    `select count(*)::int n, count(*) filter (where um.is_final_goal)::int f,
-            max(m.slug) filter (where um.is_final_goal) final_slug
-     from public.user_mountains um join public.mountains m on m.id = um.mountain_id
-     where um.user_id = $1`,
-    [ALICE],
+test("new hikers start with an empty list; the catalogue keeps the 20-mountain progression", async () => {
+  const r = await db.query(`select count(*)::int n from public.user_mountains where user_id = $1`, [ALICE]);
+  assert.equal(r.rows[0].n, 0);
+  // Everything is still available to add, in the suggested order.
+  const cat = await as(ALICE, (tx) =>
+    tx.query(`select slug from public.mountains where is_starter order by sort_order limit 3`),
   );
-  assert.deepEqual(r.rows[0], { n: 20, f: 1, final_slug: "kilimanjaro" });
+  assert.deepEqual(cat.rows.map((x) => x.slug), ["leeukop", "paarlberg", "table-mountain"]);
+  // Hikers add catalogue mountains to their own list.
+  await as(ALICE, (tx) => tx.query(`insert into public.user_mountains (mountain_id, sort_order, stage) values ($1, 1, 'start')`, [tableMountain]));
+  const after = await db.query(`select count(*)::int n from public.user_mountains where user_id = $1`, [ALICE]);
+  assert.equal(after.rows[0].n, 1);
 });
 
 test("hikers edit only their own list", async () => {
+  await as(BOB, async (tx) => {
+    await tx.query(`insert into public.user_mountains (mountain_id, sort_order) values ($1, 1)`, [sneeuberg]);
+    await tx.query(`insert into public.user_mountains (mountain_id, sort_order, is_final_goal) values ($1, 2, true)`, [tableMountain]);
+  });
   const del = await as(BOB, (tx) => tx.query(`delete from public.user_mountains where user_id = $1`, [ALICE]));
   assert.equal(del.affectedRows, 0);
   await rejects(
-    as(BOB, (tx) => tx.query(`insert into public.user_mountains (user_id, mountain_id) values ($1, $2)`, [ALICE, tableMountain])),
+    as(BOB, (tx) => tx.query(`insert into public.user_mountains (user_id, mountain_id) values ($1, $2)`, [ALICE, sneeuberg])),
   );
   const own = await as(BOB, (tx) => tx.query(`delete from public.user_mountains where user_id = $1 and mountain_id = $2`, [BOB, sneeuberg]));
   assert.equal(own.affectedRows, 1);
@@ -359,11 +366,8 @@ test("set_mountain_image: creator, or anyone when there's no cover; only own sto
 test("Final Objective follows each hiker's own final goal", async () => {
   const id = "00000000-0000-4000-8000-0000000000f1";
   await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'f@example.com', '{"username":"finaltest"}')`, [id]);
-  // Make Table Mountain their final objective, then summit it.
-  await as(id, async (tx) => {
-    await tx.query(`update public.user_mountains set is_final_goal = false where user_id = $1`, [id]);
-    await tx.query(`update public.user_mountains set is_final_goal = true where user_id = $1 and mountain_id = $2`, [id, tableMountain]);
-  });
+  // Add Table Mountain as their final objective, then summit it.
+  await as(id, (tx) => tx.query(`insert into public.user_mountains (mountain_id, is_final_goal) values ($1, true)`, [tableMountain]));
   await logHike(id, tableMountain);
   const earned = async () =>
     (await db.query(
@@ -372,22 +376,21 @@ test("Final Objective follows each hiker's own final goal", async () => {
       [id],
     )).rows.length;
   assert.equal(await earned(), 1);
-  // Moving the final goal elsewhere revokes it.
+  // Unsetting the final goal revokes it.
   await as(id, (tx) => tx.query(`update public.user_mountains set is_final_goal = false where user_id = $1`, [id]));
   assert.equal(await earned(), 0);
 });
 
-test("stages: starter list follows the suggested progression; stages are validated and protected", async () => {
+test("stages: catalogue carries the suggested stages; list stages are validated and protected", async () => {
   const r = await db.query(
-    `select m.slug, um.stage, um.sort_order from public.user_mountains um join public.mountains m on m.id = um.mountain_id
-     where um.user_id = $1 and m.slug in ('leeukop', 'saaltjie', 'virgin-peak', 'sneeukop', 'towerkop') order by um.sort_order`,
-    [ALICE],
+    `select slug, starter_stage from public.mountains
+     where slug in ('leeukop', 'saaltjie', 'virgin-peak', 'sneeukop', 'towerkop') order by sort_order`,
   );
   assert.deepEqual(
-    r.rows.map((x) => `${x.slug}:${x.stage}`),
+    r.rows.map((x) => `${x.slug}:${x.starter_stage}`),
     ["leeukop:start", "saaltjie:build", "virgin-peak:advanced", "sneeukop:high", "towerkop:extreme"],
   );
-  // Only the five stage keys are allowed.
+  // Only the five stage keys are allowed on a list entry.
   await rejects(
     as(ALICE, (tx) => tx.query(`update public.user_mountains set stage = 'expert' where user_id = $1`, [ALICE])),
     /check constraint|violates/i,

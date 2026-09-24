@@ -50,7 +50,14 @@ export const getUserList = cache(async (userId: string): Promise<Mountain[]> => 
 /** The shared catalogue, optionally filtered by name/region. */
 export async function searchCatalogue(query = "", limit = 60): Promise<Mountain[]> {
   const supabase = await createClient();
-  let q = supabase.from("mountains").select(MOUNTAIN_COLUMNS).order("name").limit(limit);
+  // The seeded progression first (in its order), then hiker-added mountains A–Z.
+  let q = supabase
+    .from("mountains")
+    .select(`${MOUNTAIN_COLUMNS}, starter_stage`)
+    .order("is_starter", { ascending: false })
+    .order("sort_order")
+    .order("name")
+    .limit(limit);
   const term = query.trim().replace(/[%_,()]/g, "");
   if (term) q = q.or(`name.ilike.%${term}%,region.ilike.%${term}%,country.ilike.%${term}%`);
   const { data, error } = await q;
