@@ -23,11 +23,13 @@ export function ShareProfileButton({
   name,
   isSelf,
   variant = "secondary",
+  className = "",
 }: {
   username: string;
   name: string;
   isSelf: boolean;
   variant?: "secondary" | "primary";
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -51,7 +53,7 @@ export function ShareProfileButton({
   }
 
   return (
-    <button type="button" onClick={onShare} className={buttonClass[variant]} aria-live="polite">
+    <button type="button" onClick={onShare} className={`${buttonClass[variant]} ${className}`} aria-live="polite">
       {copied ? <Check className="size-4" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
       {copied ? "Link copied" : isSelf ? "Share profile" : "Share"}
     </button>

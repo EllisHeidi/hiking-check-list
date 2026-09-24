@@ -44,6 +44,8 @@ export async function getProfileView(username: string, viewerId: string | null) 
     following,
     hikes,
     stats: computeStats(hikes, mountains),
+    /** Banner photo: the hiker's final objective, else the last mountain on their list with a photo. */
+    cover: mountains.find((m) => m.is_final_goal && m.image_url) ?? [...mountains].reverse().find((m) => m.image_url) ?? null,
     achievements: achievements
       .filter((a) => earnedMap.has(a.id))
       .map((a) => ({ ...a, earnedAt: earnedMap.get(a.id)! })),

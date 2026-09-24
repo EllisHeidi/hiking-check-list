@@ -19,7 +19,7 @@ export default async function MyProfilePage() {
     <>
       <ProfileView view={view} signedIn />
       <Container className="pb-16">
-        <div className="grid gap-2 border-t border-ink/15 pt-6 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 border-t border-ink/15 pt-6 sm:grid-cols-4">
           <Link href="/achievements" className={buttonClass.secondary}>
             <Trophy className="size-4" aria-hidden /> Achievements
           </Link>

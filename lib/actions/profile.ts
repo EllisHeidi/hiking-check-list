@@ -61,3 +61,42 @@ export async function setAvatar(path: string): Promise<{ ok: boolean }> {
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/** Storage path of a banner we uploaded to avatars/{uid}/…, or null for anything else. */
+function ownBannerPath(url: string | null | undefined, userId: string) {
+  const marker = "/storage/v1/object/public/avatars/";
+  const i = url?.indexOf(marker) ?? -1;
+  if (!url || i < 0) return null;
+  const path = decodeURIComponent(url.slice(i + marker.length));
+  return path.startsWith(`${userId}/banner-`) ? path : null;
+}
+
+async function replaceBanner(userId: string, newUrl: string | null) {
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const { error } = await supabase.from("profiles").update({ banner_url: newUrl }).eq("id", userId);
+  if (error) return { ok: false as const, error: error.code === "PGRST204" || /banner_url/.test(error.message) ? "Banners need a quick database update — run the profile banner SQL in Supabase." : "Couldn't save your banner." };
+  // Tidy up the previous upload.
+  const old = ownBannerPath((current as { banner_url?: string | null } | null)?.banner_url, userId);
+  if (old) await supabase.storage.from("avatars").remove([old]);
+  revalidatePath("/", "layout");
+  return { ok: true as const };
+}
+
+/** Save a banner the browser uploaded to avatars/{uid}/banner-… */
+export async function setBanner(path: string): Promise<{ ok: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || !path.startsWith(`${user.id}/banner-`) || path.includes("..")) return { ok: false, error: "Invalid photo." };
+  const supabase = await createClient();
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  const res = await replaceBanner(user.id, data.publicUrl);
+  if (!res.ok) await supabase.storage.from("avatars").remove([path]);
+  return res;
+}
+
+/** Go back to the default banner (your final objective's photo). */
+export async function removeBanner(): Promise<{ ok: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Log in first." };
+  return replaceBanner(user.id, null);
+}

@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types";
 
-const PROFILE_COLUMNS = "id, username, display_name, avatar_url, bio, is_public, created_at";
+// "*" so newer optional columns (e.g. banner_url) never break older databases.
+const PROFILE_COLUMNS = "*";
 
 /**
  * The authenticated user for this request, verified with the Supabase Auth

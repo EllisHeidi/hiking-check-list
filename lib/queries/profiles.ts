@@ -17,7 +17,7 @@ export async function getFullProfile(id: string): Promise<Profile | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, display_name, avatar_url, bio, is_public, created_at")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   return (data as Profile | null) ?? null;

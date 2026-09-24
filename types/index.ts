@@ -40,6 +40,8 @@ export interface Profile {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  /** Custom banner photo (public URL); falls back to the final objective's photo. */
+  banner_url?: string | null;
   bio: string | null;
   is_public: boolean;
   created_at: string;

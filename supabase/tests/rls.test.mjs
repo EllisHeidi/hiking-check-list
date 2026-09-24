@@ -403,3 +403,15 @@ test("stages: starter list follows the suggested progression; stages are validat
   );
   assert.equal(rows[0].starter_stage, null);
 });
+
+test("profile banners: only you can set yours", async () => {
+  const url = "https://x.supabase.co/storage/v1/object/public/avatars/" + BOB + "/banner-x.jpg";
+  const r = await as(BOB, (tx) => tx.query(`update public.profiles set banner_url = $1 where id = $2`, [url, ALICE]));
+  assert.equal(r.affectedRows, 0);
+  const own = await as(BOB, (tx) => tx.query(`update public.profiles set banner_url = $1 where id = $2`, [url, BOB]));
+  assert.equal(own.affectedRows, 1);
+  // Banner files go in your own avatars folder only.
+  await rejects(
+    as(BOB, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('avatars', $1)`, [`${ALICE}/banner-evil.jpg`])),
+  );
+});

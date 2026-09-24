@@ -5,7 +5,15 @@ import { Loader2 } from "lucide-react";
 import { setFollowing } from "@/lib/actions/follows";
 import { buttonClass } from "@/components/ui/form";
 
-export function FollowButton({ targetId, initialFollowing }: { targetId: string; initialFollowing: boolean }) {
+export function FollowButton({
+  targetId,
+  initialFollowing,
+  className = "",
+}: {
+  targetId: string;
+  initialFollowing: boolean;
+  className?: string;
+}) {
   const [following, setOptimistic] = useOptimistic(initialFollowing);
   const [pending, start] = useTransition();
 
@@ -20,7 +28,7 @@ export function FollowButton({ targetId, initialFollowing }: { targetId: string;
           await setFollowing(targetId, !following);
         })
       }
-      className={`${following ? buttonClass.secondary : buttonClass.primary} min-w-36`}
+      className={`${following ? buttonClass.secondary : buttonClass.primary} min-w-36 ${className}`}
     >
       {pending && <Loader2 className="size-4 animate-spin" aria-hidden />}
       {following ? "Following" : "Follow"}
