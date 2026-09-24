@@ -1,29 +1,25 @@
 import type { UserStats } from "@/types";
 import { fmtInt } from "@/lib/format";
-import { shortName } from "@/lib/calculations/stats";
+import { EVEREST_M } from "@/lib/calculations/stats";
 
-/** Cumulative elevation gain expressed in multiples of your final objective. A comparison — not altitude reached. */
+/** Cumulative elevation gain expressed in Everests — just for fun. A comparison, not altitude reached. */
 export function ElevationEquivalent({ stats }: { stats: UserStats }) {
-  const goal = stats.finalGoal;
-  const kili = goal?.elevation;
-  if (!goal || !kili) return null;
-  const name = shortName(goal.name);
-  const whole = Math.floor(stats.finalGoalMultiple);
-  const partial = stats.finalGoalMultiple - whole;
+  const multiple = stats.everestMultiple;
+  const whole = Math.floor(multiple);
+  const partial = multiple - whole;
   const icons = Math.min(whole, 12);
+  const toGo = EVEREST_M - (stats.totalElevationM % EVEREST_M);
 
   return (
     <div className="rounded-sm border border-ink/10 bg-stone-50 p-5 sm:p-8">
-      <p className="eyebrow">{name} equivalent</p>
+      <p className="eyebrow">Everest equivalent</p>
       <p className="mt-4 text-slate">You have climbed</p>
       <p className="font-display text-6xl tabular-nums sm:text-7xl">
         {fmtInt(stats.totalElevationM)}
         <span className="text-[0.45em] text-slate"> m</span>
       </p>
       <p className="mt-2 text-lg">
-        That&apos;s{" "}
-        <strong className="font-display text-3xl text-ember">{stats.finalGoalMultiple.toFixed(2)}×</strong>{" "}
-        {goal.name}.
+        That&apos;s <strong className="font-display text-3xl text-ember">{multiple.toFixed(2)}×</strong> Mount Everest.
       </p>
 
       <div className="mt-6 flex flex-wrap items-end gap-1.5" aria-hidden>
@@ -33,10 +29,13 @@ export function ElevationEquivalent({ stats }: { stats: UserStats }) {
         {whole < 12 && <Peak fill={partial} />}
         {whole >= 12 && <span className="font-mono text-xs text-slate">+{whole - 12}</span>}
       </div>
+      <p className="mt-2 font-mono text-xs text-slate">
+        {fmtInt(toGo)} m to {whole === 0 ? "your first" : `Everest no. ${whole + 1}`}
+      </p>
 
       <p className="mt-6 border-t border-ink/10 pt-4 text-sm text-mist">
-        Total elevation gained across all your hikes, compared with {name}&apos;s {fmtInt(kili)} m summit.
-        It&apos;s an elevation comparison — not the altitude you&apos;ve actually reached.
+        Total elevation gained across all your hikes, compared with Everest&apos;s {fmtInt(EVEREST_M)} m summit — just for
+        fun. It&apos;s an elevation comparison, not the altitude you&apos;ve actually reached.
       </p>
     </div>
   );

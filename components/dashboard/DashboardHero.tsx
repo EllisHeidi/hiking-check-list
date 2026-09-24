@@ -14,10 +14,11 @@ export function DashboardHero({ stats, name }: { stats: UserStats; name: string 
           Kill List
         </h1>
         <p className="mt-4 text-xl text-charcoal sm:text-2xl">
-          {stats.finalGoal ? <>Your road to {shortName(stats.finalGoal.name)}.</> : "Build your list. Pick your summit."}
+          {stats.finalGoal ? <>Your road to {shortName(stats.finalGoal.name)}.</> : "Conquer mountains. Build your elevation."}
         </p>
         <p className="mt-1 font-mono text-xs uppercase tracking-[0.16em] text-slate">
-          {stats.totalMountains} objectives{stats.finalGoal?.elevation ? ` → ${fmtInt(stats.finalGoal.elevation)} m` : ""}
+          {stats.totalMountains} {stats.totalMountains === 1 ? "objective" : "objectives"} on your list
+          {stats.finalGoal?.elevation ? ` → ${fmtInt(stats.finalGoal.elevation)} m` : ""}
         </p>
 
         <div className="mt-10 grid items-end gap-6 sm:grid-cols-[auto_1fr] sm:gap-10">

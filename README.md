@@ -168,7 +168,7 @@ Defined in the `achievements` table (`requirement_type` + `requirement_value`). 
 
 ### Statistics
 
-All stats are computed from the user's hikes in [`lib/calculations`](lib/calculations): distance and elevation count every logged hike (including turned-back attempts); conquered count and highest summit count completed summits only. The Kilimanjaro equivalent divides total elevation gained by the final goal's elevation — a comparison, not altitude reached.
+All stats are computed from the user's hikes in [`lib/calculations`](lib/calculations): distance and elevation count every logged hike (including turned-back attempts); conquered count and highest summit count completed summits only. The Everest equivalent divides total elevation gained by Mount Everest's 8,849 m — just for fun, a comparison rather than altitude reached.
 
 ### Map
 

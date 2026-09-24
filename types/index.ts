@@ -137,6 +137,6 @@ export interface UserStats {
   averageDistanceKm: number;
   /** The hiker's own final objective. */
   finalGoal: { name: string; elevation: number | null; id: string } | null;
-  /** Total elevation gained ÷ final objective's elevation. */
-  finalGoalMultiple: number;
+  /** Total elevation gained ÷ Mount Everest's height — a fun comparison. */
+  everestMultiple: number;
 }

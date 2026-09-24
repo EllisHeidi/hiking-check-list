@@ -18,6 +18,9 @@ export function firstSummitDates(hikes: Hike[]): Map<string, string> {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/** Mount Everest, for the "how many Everests have you climbed" comparison. */
+export const EVEREST_M = 8849;
+
 /**
  * Every dashboard/profile statistic, derived from the hiker's hikes and their
  * personal list. Distance and elevation count every logged hike (including
@@ -59,9 +62,7 @@ export function computeStats(
     longestHikeKm: round1(longestHikeKm),
     averageDistanceKm: withDistance.length ? round1(totalDistanceKm / withDistance.length) : 0,
     finalGoal,
-    finalGoalMultiple: finalGoal?.elevation
-      ? Math.round((totalElevationM / finalGoal.elevation) * 100) / 100
-      : 0,
+    everestMultiple: Math.round((totalElevationM / EVEREST_M) * 100) / 100,
   };
 }
 
